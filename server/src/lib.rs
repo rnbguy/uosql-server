@@ -2,7 +2,7 @@ extern crate bincode;
 extern crate byteorder;
 #[macro_use]
 extern crate log;
-extern crate rustc_serialize;
+extern crate serde;
 extern crate term_painter as term;
 
 pub mod auth;

@@ -9,6 +9,8 @@ use std::io::*;
 use std::iter::Iterator;
 use std::marker::PhantomData;
 
+use serde::{Deserialize, Serialize};
+
 pub trait KnownSize {
     /// returns the fixed size of all objects ever created
     fn size() -> u64;
@@ -1012,7 +1014,7 @@ const BnodeElementCountOffset: u64 = 26;
 const BnodeIsRootOffset: u64 = 25;
 const BnodeLeftBrotherOffset: u64 = 8;
 const BnodeRightBrotherOffset: u64 = 16;
-#[derive(Debug, RustcDecodable, RustcEncodable)]
+#[derive(Debug, Serialize, Deserialize)]
 pub struct Bnode<T: PartialOrd + KnownSize + Debug> {
     pub node_list: SortedList<KeyAddr<T>>,
     pub father: u64,
@@ -1143,7 +1145,7 @@ impl<T: PartialOrd + KnownSize + Debug> Bnode<T> {
     }
 }
 
-#[derive(Debug, RustcDecodable, RustcEncodable)]
+#[derive(Debug, Serialize, Deserialize)]
 pub struct SortedList<T: PartialOrd + Debug> {
     pub list: Vec<T>,
     pub elementcount: u64,
@@ -1293,7 +1295,7 @@ impl<T: PartialOrd + Debug> SortedList<T> {
     }
 }
 
-#[derive(Debug, RustcDecodable, RustcEncodable, Clone)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct KeyAddr<T: PartialOrd + KnownSize + Debug> {
     pub key: T,
     pub addr: u64,

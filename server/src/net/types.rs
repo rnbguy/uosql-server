@@ -7,6 +7,8 @@ use storage::types::FromSql;
 use storage::ResultSet;
 use storage::{Column, SqlType};
 
+use serde::{Deserialize, Serialize};
+
 /// Representation of a ResultSet with its useful functions to get data.
 pub struct DataSet {
     data: Vec<Vec<Vec<u8>>>,
@@ -281,7 +283,7 @@ pub fn preprocess(data: &ResultSet) -> DataSet {
 }
 
 /// Code numeric value sent as first byte
-#[derive(PartialEq, RustcEncodable, RustcDecodable)]
+#[derive(PartialEq, Serialize, Deserialize)]
 #[repr(u8)]
 pub enum PkgType {
     Greet = 0,
@@ -295,7 +297,7 @@ pub enum PkgType {
 }
 
 /// Struct to send the kind of error and error message to the client
-#[derive(RustcEncodable, RustcDecodable, Debug)]
+#[derive(Debug, Serialize, Deserialize)]
 pub struct ClientErrMsg {
     code: u16,
     pub msg: String,
@@ -317,12 +319,8 @@ impl From<super::Error> for ClientErrMsg {
                 code: 3,
                 msg: error.description().into(),
             },
-            super::Error::Encode(_) => ClientErrMsg {
+            super::Error::Bincode(_) => ClientErrMsg {
                 code: 4,
-                msg: error.description().into(),
-            },
-            super::Error::Decode(_) => ClientErrMsg {
-                code: 5,
                 msg: error.description().into(),
             },
             super::Error::UnEoq(_) => ClientErrMsg {
@@ -335,7 +333,7 @@ impl From<super::Error> for ClientErrMsg {
 
 /// This is the first packet being sent by the server after the TCP connection
 /// is established.
-#[derive(RustcEncodable, RustcDecodable)]
+#[derive(Serialize, Deserialize)]
 pub struct Greeting {
     pub protocol_version: u8, // 1 byte
     pub message: String,      // n bytes
@@ -352,7 +350,7 @@ impl Greeting {
 
 /// The client responds with this packet to a `Greeting` packet, finishing the
 /// authentication handshake.
-#[derive(Default, RustcEncodable, RustcDecodable)]
+#[derive(Default, Serialize, Deserialize)]
 pub struct Login {
     pub username: String,
     pub password: String,
@@ -362,7 +360,7 @@ pub struct Login {
 ///
 /// Many commands are executed via query, but there are some "special"
 /// commands that are not sent as query.
-#[derive(RustcEncodable, RustcDecodable, Debug, PartialEq)]
+#[derive(Serialize, Deserialize, Debug, PartialEq)]
 #[repr(u8)]
 pub enum Command {
     Quit,

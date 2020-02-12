@@ -2,8 +2,7 @@
 extern crate server;
 extern crate bincode;
 
-use bincode::rustc_serialize::{decode_from, encode_into, DecodingError, EncodingError};
-use bincode::SizeLimit;
+use bincode::{deserialize_from, serialize_into};
 pub use server::logger;
 pub use server::net::types;
 use server::storage::ResultSet;
@@ -13,6 +12,8 @@ use std::net::{AddrParseError, Ipv4Addr, TcpStream};
 use std::str::FromStr;
 use types::*;
 
+use std::io::Read;
+
 const PROTOCOL_VERSION: u8 = 1;
 
 /// Client specific Error definition.
@@ -21,8 +22,7 @@ pub enum Error {
     AddrParse(AddrParseError),
     Io(io::Error),
     UnexpectedPkg,
-    Encode(EncodingError),
-    Decode(DecodingError),
+    Bincode(bincode::Error),
     Auth,
     Server(ClientErrMsg),
 }
@@ -41,8 +41,7 @@ impl std::error::Error for Error {
             &Error::AddrParse(_) => "wrong IPv4 address format",
             &Error::Io(_) => "IO error occured",
             &Error::UnexpectedPkg => "received unexpected package",
-            &Error::Encode(_) => "could not encode/ send package",
-            &Error::Decode(_) => "could not decode/ receive package",
+            &Error::Bincode(_) => "could not encode/decode send package",
             &Error::Auth => "could not authenticate user",
             &Error::Server(ref e) => &e.msg,
         }
@@ -63,17 +62,10 @@ impl From<AddrParseError> for Error {
     }
 }
 
-/// Implement the conversion from EncodingError to NetworkError
-impl From<EncodingError> for Error {
-    fn from(err: EncodingError) -> Error {
-        Error::Encode(err)
-    }
-}
-
-/// Implement the conversion from DecodingError to NetworkError
-impl From<DecodingError> for Error {
-    fn from(err: DecodingError) -> Error {
-        Error::Decode(err)
+/// Implement the conversion from (En/De)codingError to NetworkError
+impl From<bincode::Error> for Error {
+    fn from(err: bincode::Error) -> Error {
+        Error::Bincode(err)
     }
 }
 
@@ -119,26 +111,26 @@ impl Connection {
             Ok(_) => {}
             Err(e) => return Err(e),
         };
-        let greet: Greeting = try!(decode_from(&mut tmp_tcp, SizeLimit::Bounded(1024)));
+        let greet: Greeting = try!(deserialize_from(&mut tmp_tcp));
 
         // Login package
         let log = Login {
             username: usern,
             password: passwd,
         };
-        match encode_into(&PkgType::Login, &mut tmp_tcp, SizeLimit::Bounded(1024)) {
+        match serialize_into(&mut tmp_tcp, &PkgType::Login) {
             Ok(_) => {}
             Err(e) => return Err(e.into()),
         }
 
         // Login data
-        match encode_into(&log, &mut tmp_tcp, SizeLimit::Bounded(1024)) {
+        match serialize_into(&mut tmp_tcp, &log) {
             Ok(_) => {}
             Err(e) => return Err(e.into()),
         }
 
         // Get Login response - either user is authorized or unauthorized
-        let status: PkgType = try!(decode_from(&mut tmp_tcp, SizeLimit::Bounded(1024)));
+        let status: PkgType = try!(deserialize_from(&mut tmp_tcp));
         match status {
             PkgType::AccGranted => Ok(Connection {
                 ip: addr,
@@ -184,7 +176,7 @@ impl Connection {
         };
         match receive(&mut self.tcp, PkgType::Response) {
             Ok(_) => {
-                let rows: ResultSet = try!(decode_from(&mut self.tcp, SizeLimit::Infinite));
+                let rows: ResultSet = try!(deserialize_from(&mut self.tcp));
                 let dataset = preprocess(&rows);
                 Ok(dataset)
             }
@@ -226,17 +218,17 @@ fn get_lib_version() -> u8 {
 
 /// Send command package with actual command, e.g. quit, ping, query.
 fn send_cmd<W: Write>(mut s: &mut W, cmd: Command, size: u64) -> Result<(), Error> {
-    try!(encode_into(&PkgType::Command, s, SizeLimit::Bounded(1024)));
-    try!(encode_into(&cmd, &mut s, SizeLimit::Bounded(size)));
+    try!(serialize_into(&mut s, &PkgType::Command));
+    try!(serialize_into(&mut s, &cmd));
     Ok(())
 }
 
 /// Match received packages to expected packages.
 fn receive(s: &mut TcpStream, cmd: PkgType) -> Result<(), Error> {
-    let status: PkgType = try!(decode_from(s, SizeLimit::Bounded(1024)));
+    let status: PkgType = try!(deserialize_from(s.take(1024)));
 
     if status == PkgType::Error {
-        let err: ClientErrMsg = try!(decode_from(s, SizeLimit::Infinite));
+        let err: ClientErrMsg = try!(deserialize_from(s));
         return Err(Error::Server(err));
     }
 
@@ -244,10 +236,10 @@ fn receive(s: &mut TcpStream, cmd: PkgType) -> Result<(), Error> {
         match status {
             PkgType::Ok => {}
             PkgType::Response => {
-                let _: ResultSet = try!(decode_from(s, SizeLimit::Infinite));
+                let _: ResultSet = try!(deserialize_from(s));
             }
             PkgType::Greet => {
-                let _: Greeting = try!(decode_from(s, SizeLimit::Infinite));
+                let _: Greeting = try!(deserialize_from(s));
             }
             _ => {}
         }

@@ -1,11 +1,13 @@
 extern crate docopt;
 #[macro_use]
 extern crate log;
-extern crate rustc_serialize;
+extern crate serde;
+extern crate serde_json;
 extern crate server;
 
+use serde::Deserialize;
+
 use docopt::Docopt;
-use rustc_serialize::json;
 use std::fs::File;
 use std::io::Read;
 use std::net::Ipv4Addr;
@@ -23,7 +25,7 @@ Options:
     --dir=<directory>   Change the path of the database.
 ";
 
-#[derive(Debug, RustcDecodable)]
+#[derive(Debug, Deserialize)]
 struct Args {
     flag_cfg: Option<String>,
     flag_bind: Option<String>,
@@ -43,7 +45,7 @@ fn main() {
 
     // Getting the information for a possible configuration
     let args: Args = Docopt::new(USAGE)
-        .and_then(|d| d.decode())
+        .and_then(|d| d.deserialize())
         .unwrap_or_else(|e| e.exit());
 
     // If a cfg is entered, use this file name to set configurations
@@ -74,7 +76,7 @@ fn main() {
 /// returns default values for everything that is
 /// not entered manually
 fn read_conf_from_json(name: String) -> server::Config {
-    #[derive(Debug, RustcDecodable, Default)]
+    #[derive(Debug, Default, Deserialize)]
     struct CfgFile {
         address: Option<String>,
         port: Option<u16>,
@@ -88,7 +90,7 @@ fn read_conf_from_json(name: String) -> server::Config {
         if let Err(e) = f.read_to_string(&mut s) {
             error!("Could not read JSON-file: {:?}", e)
         } else {
-            config = json::decode(&s).unwrap();
+            config = serde_json::from_str(&s).unwrap();
         }
     }
 

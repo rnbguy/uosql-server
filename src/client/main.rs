@@ -7,7 +7,7 @@ extern crate byteorder;
 extern crate docopt;
 extern crate libc;
 extern crate regex;
-extern crate rustc_serialize;
+extern crate serde;
 extern crate server;
 extern crate uosql;
 
@@ -17,10 +17,10 @@ extern "C" {
 
 mod specialcrate;
 
-use bincode::rustc_serialize::{decode_from, encode_into};
-use bincode::SizeLimit;
+use bincode::{deserialize_from, serialize_into};
 use docopt::Docopt;
 use regex::Regex;
+use serde::{Deserialize, Serialize};
 use server::storage::SqlType;
 use std::cmp::{max, min};
 use std::error::Error;
@@ -44,7 +44,7 @@ Options:
     --pwd=<password>    Login with given password.
 ";
 
-#[derive(Debug, RustcDecodable)]
+#[derive(Debug, Deserialize)]
 struct Args {
     flag_bind: Option<String>,
     flag_port: Option<u16>,
@@ -53,14 +53,14 @@ struct Args {
 }
 
 fn main() {
-    logger::with_loglevel(log::LogLevelFilter::Trace)
+    logger::with_loglevel(log::LevelFilter::Trace)
         .with_logfile(std::path::Path::new("log.txt"))
         .enable()
         .unwrap();
 
     // Getting the information for a possible configuration
     let args: Args = Docopt::new(USAGE)
-        .and_then(|d| d.decode())
+        .and_then(|d| d.deserialize())
         .unwrap_or_else(|e| e.exit());
 
     // Change the bind address if flag is set
@@ -119,11 +119,7 @@ fn main() {
                 error!("{}", e.description());
                 return;
             }
-            uosql::Error::Decode(_) => {
-                error!("{}", e.description());
-                return;
-            }
-            uosql::Error::Encode(_) => {
+            uosql::Error::Bincode(_) => {
                 error!("{}", e.description());
                 return;
             }
@@ -155,7 +151,7 @@ fn main() {
     let f = File::open("uosql_client.history");
     match f {
         Ok(mut f) => {
-            history = match decode_from(&mut f, SizeLimit::Infinite) {
+            history = match deserialize_from(&mut f) {
                 Ok(his) => his,
                 Err(_) => {
                     println!("Could not read command history.");
@@ -278,7 +274,7 @@ fn main() {
                     // write history to file if client program closes
                     let f = File::create("uosql_client.history");
                     match f {
-                        Ok(mut f) => match encode_into(&history, &mut f, SizeLimit::Infinite) {
+                        Ok(mut f) => match serialize_into(&mut f, &history) {
                             Ok(_) => {}
                             Err(_) => println!("Could not write command history."),
                         },
@@ -410,11 +406,7 @@ fn process_input(input: &str, conn: &mut Connection, history: &Vec<String>) -> b
                         error!("{}", e.description());
                         return true;
                     }
-                    uosql::Error::Decode(_) => {
-                        error!("{}", e.description());
-                        return true;
-                    }
-                    uosql::Error::Encode(_) => {
+                    uosql::Error::Bincode(_) => {
                         error!("{}", e.description());
                         return true;
                     }
@@ -518,11 +510,7 @@ fn execute_sql(mut f: File, conn: &mut Connection) -> bool {
                     error!("{}", e.description());
                     return true;
                 }
-                uosql::Error::Decode(_) => {
-                    error!("{}", e.description());
-                    return true;
-                }
-                uosql::Error::Encode(_) => {
+                uosql::Error::Bincode(_) => {
                     error!("{}", e.description());
                     return true;
                 }

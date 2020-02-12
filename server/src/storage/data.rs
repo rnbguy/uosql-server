@@ -4,6 +4,8 @@ use super::Error;
 use std::io::{Cursor, Read, Seek, SeekFrom, Write};
 use std::vec::Vec;
 
+use serde::{Deserialize, Serialize};
+
 #[derive(Debug)]
 pub struct Rows<B: Write + Read + Seek> {
     data_src: B,
@@ -642,7 +644,7 @@ impl RowHeader {
 }
 
 /// Encodable and decodable representation of a Rows object
-#[derive(Debug, RustcEncodable, RustcDecodable)]
+#[derive(Debug, Serialize, Deserialize)]
 pub struct ResultSet {
     pub data: Vec<u8>,
     pub columns: Vec<Column>,

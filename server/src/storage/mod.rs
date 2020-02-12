@@ -8,7 +8,8 @@ pub mod types;
 
 mod data;
 
-use bincode::rustc_serialize::{DecodingError, EncodingError};
+use bincode::{deserialize_from, serialize_into};
+use serde::{Deserialize, Serialize};
 
 pub use self::data::ResultSet;
 pub use self::data::Rows;
@@ -35,9 +36,8 @@ pub use std::string::FromUtf8Error;
 #[derive(Debug)]
 pub enum Error {
     Io(io::Error),
-    BinEn(EncodingError),
-    BinDe(DecodingError),
-    Byteorder(::byteorder::Error),
+    Bin(bincode::Error),
+    Byteorder(io::Error),
     Utf8Error(FromUtf8Error),
     Utf8StrError(Utf8Error),
     NulError(NulError),
@@ -87,21 +87,9 @@ impl From<io::Error> for Error {
     }
 }
 
-impl From<EncodingError> for Error {
-    fn from(err: EncodingError) -> Error {
-        Error::BinEn(err)
-    }
-}
-
-impl From<DecodingError> for Error {
-    fn from(err: DecodingError) -> Error {
-        Error::BinDe(err)
-    }
-}
-
-impl From<::byteorder::Error> for Error {
-    fn from(err: ::byteorder::Error) -> Error {
-        Error::Byteorder(err)
+impl From<bincode::Error> for Error {
+    fn from(err: bincode::Error) -> Error {
+        Error::Bin(err)
     }
 }
 
@@ -154,7 +142,7 @@ pub trait Engine {
 }
 
 #[repr(u8)]
-#[derive(Clone, Copy, Debug, RustcDecodable, RustcEncodable)]
+#[derive(Clone, Copy, Debug, Serialize, Deserialize)]
 pub enum EngineID {
     FlatFile = 1,
     InvertedIndex,

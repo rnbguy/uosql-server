@@ -2,8 +2,7 @@ extern crate bincode;
 extern crate log;
 extern crate server;
 
-use bincode::rustc_serialize::encode_into;
-use bincode::SizeLimit;
+use bincode::serialize_into;
 use server::logger;
 use server::storage::*;
 use std::io::Cursor;

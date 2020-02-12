@@ -1,3 +1,4 @@
+#[allow(warnings)]
 #[macro_use]
 extern crate log;
 #[macro_use]
@@ -5,15 +6,14 @@ extern crate nickel;
 extern crate cookie;
 extern crate hyper;
 extern crate plugin;
-extern crate rustc_serialize;
 extern crate server;
 extern crate typemap;
 extern crate uosql;
 extern crate url;
 
 use cookie::Cookie as CookiePair;
-use hyper::header::{Cookie, SetCookie};
-use hyper::method::Method;
+use nickel::hyper::header::{Cookie, SetCookie};
+use nickel::hyper::method::Method;
 use nickel::QueryString;
 use nickel::{HttpRouter, Nickel};
 use plugin::Extensible;
@@ -167,11 +167,8 @@ fn main() {
                                 Error::Io(_) => {
                                     "Connection failure. Try again later."
                                 },
-                                Error::Decode(_) => {
+                                Error::Bincode(_) => {
                                     "Could not readfsdfd data from server."
-                                },
-                                Error::Encode(_) => {
-                                    "Could not send data to server."
                                 },
                                 Error::UnexpectedPkg => {
                                     "Unexpected Package."
@@ -197,7 +194,7 @@ fn main() {
             // Set a Cookie with the session string as its value
             // sess_str is set to a value here, so we can safely unwrap
             let keks = CookiePair::new("UosqlDB".to_owned(), sess_str.clone());
-            res.headers_mut().set(SetCookie(vec![keks]));
+            res.headers_mut().set(SetCookie(vec![keks.to_string()]));
 
             // Redirect to the greeting page
             *res.status_mut() = nickel::status::StatusCode::Found;
@@ -254,8 +251,7 @@ fn main() {
                     Err(e) => {
                         let errstr = match e {
                             Error::Io(_) => "Connection failure. Try again later.",
-                            Error::Decode(_) => "Could not read data from server.",
-                            Error::Encode(_) => "Could not send data to server.",
+                            Error::Bincode(_) => "Could not read data from server.",
                             Error::UnexpectedPkg => "Received unexpected package.",
                             Error::Server(_) => "Server error.",
                             _ => "Unexpected behaviour during execute().",

@@ -21,8 +21,10 @@ use std::fmt;
 use std::io::{self, Read, Write};
 // to encode and decode the structs to the given stream
 use self::types::*;
-use bincode::rustc_serialize::{decode_from, encode_into, DecodingError, EncodingError};
-use bincode::SizeLimit;
+
+use bincode::{deserialize_from, serialize_into};
+use serde::{Deserialize, Serialize};
+
 use parse::parser::ParseError;
 use storage::ResultSet;
 
@@ -35,8 +37,7 @@ pub enum Error {
     Io(io::Error),
     UnexpectedPkg,
     UnknownCmd,
-    Encode(EncodingError),
-    Decode(DecodingError),
+    Bincode(bincode::Error),
     UnEoq(ParseError),
 }
 
@@ -54,8 +55,7 @@ impl std::error::Error for Error {
             &Error::Io(_) => "IO error occured",
             &Error::UnexpectedPkg => "received unexpected package",
             &Error::UnknownCmd => "cannot interpret command: unknown",
-            &Error::Encode(_) => "could not encode/ send package",
-            &Error::Decode(_) => "could not decode/ receive package",
+            &Error::Bincode(_) => "could not encode/decode package",
             &Error::UnEoq(_) => "parsing error",
         }
     }
@@ -68,17 +68,10 @@ impl From<io::Error> for Error {
     }
 }
 
-/// Implement the conversion from EncodingError to NetworkError
-impl From<EncodingError> for Error {
-    fn from(err: EncodingError) -> Error {
-        Error::Encode(err)
-    }
-}
-
 /// Implement the conversion from DecodingError to NetworkError
-impl From<DecodingError> for Error {
-    fn from(err: DecodingError) -> Error {
-        Error::Decode(err)
+impl From<bincode::Error> for Error {
+    fn from(err: bincode::Error) -> Error {
+        Error::Bincode(err)
     }
 }
 
@@ -90,16 +83,12 @@ impl From<ParseError> for Error {
 }
 
 /// Write a welcome-message to the given server-client-stream.
-pub fn do_handshake<W: Write + Read>(stream: &mut W) -> Result<(String, String), Error> {
+pub fn do_handshake<W: Write + Read>(mut stream: &mut W) -> Result<(String, String), Error> {
     let greet = Greeting::make_greeting(PROTOCOL_VERSION, WELCOME_MSG.into());
 
     // send handshake packet to client
-    try!(encode_into(
-        &PkgType::Greet,
-        stream,
-        SizeLimit::Bounded(1024)
-    ));
-    try!(encode_into(&greet, stream, SizeLimit::Bounded(1024)));
+    try!(serialize_into(&mut stream, &PkgType::Greet));
+    try!(serialize_into(&mut stream, &greet));
 
     // receive login data from client
     let login = read_login(stream);
@@ -111,19 +100,20 @@ pub fn do_handshake<W: Write + Read>(stream: &mut W) -> Result<(String, String),
 
 /// Read the data from the response to the handshake,
 /// username and password extracted and returned.
-pub fn read_login<R: Read + Write>(stream: &mut R) -> Result<Login, Error> {
+pub fn read_login<R: Read>(stream: R) -> Result<Login, Error> {
     // read package-type
-    let status: PkgType = try!(decode_from(stream, SizeLimit::Bounded(1024)));
+    let status: PkgType = try!(deserialize_from(stream));
 
     match status {
         PkgType::Login =>
         // read the login data
         {
-            decode_from(stream, SizeLimit::Bounded(1024)).map_err(|e| e.into())
+            // deserialize_from(stream).map_err(|e| e.into())
+            Err(Error::UnexpectedPkg)
         }
         PkgType::Command => {
             // free the stream
-            let _ = decode_from::<R, Command>(stream, SizeLimit::Bounded(4096));
+            // let _: Command = try!(deserialize_from(stream));
             Err(Error::UnexpectedPkg)
         }
         _ => Err(Error::UnexpectedPkg),
@@ -131,46 +121,41 @@ pub fn read_login<R: Read + Write>(stream: &mut R) -> Result<Login, Error> {
 }
 
 /// Read the sent bytes, extract the kind of command.
-pub fn read_commands<R: Read + Write>(stream: &mut R) -> Result<Command, Error> {
+pub fn read_commands<R: Read>(stream: R) -> Result<Command, Error> {
     // read the first byte for code numeric value
-    let status: PkgType = try!(decode_from(stream, SizeLimit::Bounded(1024)));
+    let status: PkgType = try!(deserialize_from(stream));
 
     match status {
         PkgType::Login => {
             // free the stream
-            let _ = decode_from::<R, Login>(stream, SizeLimit::Bounded(1024));
+            // let _: Login = try!(deserialize_from(stream));
             Err(Error::UnexpectedPkg)
         }
-        PkgType::Command => decode_from(stream, SizeLimit::Bounded(4096)).map_err(|e| e.into()),
+        PkgType::Command => {
+            // deserialize_from(stream).map_err(|e| e.into());
+            Err(Error::UnexpectedPkg)
+        }
         _ => Err(Error::UnexpectedPkg),
     }
 }
 
 /// Send error package with given error code status.
 pub fn send_error_package<W: Write>(mut stream: &mut W, err: ClientErrMsg) -> Result<(), Error> {
-    try!(encode_into(
-        &PkgType::Error,
-        stream,
-        SizeLimit::Bounded(1024)
-    ));
-    try!(encode_into(&err, &mut stream, SizeLimit::Bounded(1024)));
+    try!(serialize_into(&mut stream, &PkgType::Error));
+    try!(serialize_into(&mut stream, &err));
     Ok(())
 }
 
 /// Send information package only with package type information.
 pub fn send_info_package<W: Write>(mut stream: &mut W, pkg: PkgType) -> Result<(), Error> {
-    try!(encode_into(&pkg, stream, SizeLimit::Bounded(1024)));
+    try!(serialize_into(&mut stream, &pkg));
     Ok(())
 }
 
 /// Send Result package as response to a query.
 pub fn send_response_package<W: Write>(mut stream: &mut W, data: ResultSet) -> Result<(), Error> {
-    try!(encode_into(
-        &PkgType::Response,
-        stream,
-        SizeLimit::Bounded(1024)
-    ));
-    try!(encode_into(&data, stream, SizeLimit::Infinite));
+    try!(serialize_into(&mut stream, &PkgType::Response));
+    try!(serialize_into(&mut stream, &data));
     Ok(())
 }
 
@@ -225,8 +210,8 @@ pub fn test_read_commands() {
     let mut vec = Vec::new(); // stream to write into
 
     // write the command into the stream
-    let _ = encode_into(&PkgType::Command, &mut vec, SizeLimit::Bounded(1024));
-    let _ = encode_into(&Command::Quit, &mut vec, SizeLimit::Bounded(1024));
+    let _ = serialize_into(&mut vec, &PkgType::Command);
+    let _ = serialize_into(&mut vec, &Command::Quit);
 
     // read the command from the stream for Command::Quit
     let mut command_res = read_commands(&mut Cursor::new(vec));
@@ -235,12 +220,8 @@ pub fn test_read_commands() {
 
     let mut vec2 = Vec::new();
     // write the command into the stream
-    let _ = encode_into(&PkgType::Command, &mut vec2, SizeLimit::Bounded(1024));
-    let _ = encode_into(
-        &Command::Query("select".into()),
-        &mut vec2,
-        SizeLimit::Bounded(1024),
-    );
+    let _ = serialize_into(&mut vec2, &PkgType::Command);
+    let _ = serialize_into(&mut vec2, &Command::Query("select".into()));
 
     // read the command from the stream for Command::Query("select")
     command_res = read_commands(&mut Cursor::new(vec2));
@@ -258,8 +239,8 @@ pub fn testlogin() {
         username: "elena".into(),
         password: "prakt".into(),
     };
-    let _ = encode_into(&PkgType::Login, &mut vec, SizeLimit::Bounded(1024));
-    let _ = encode_into(&login, &mut vec, SizeLimit::Bounded(1024));
+    let _ = serialize_into(&mut vec, &PkgType::Login);
+    let _ = serialize_into(&mut vec, &login);
 
     let login_res = read_login(&mut Cursor::new(vec)).unwrap();
 

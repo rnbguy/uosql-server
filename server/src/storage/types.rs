@@ -4,12 +4,15 @@ use super::Error;
 
 use byteorder::{BigEndian, ReadBytesExt, WriteBytesExt};
 
+use bincode::{deserialize_from, serialize_into};
+use serde::{Deserialize, Serialize};
+
 use std::ffi::CString;
 use std::io::Read;
 use std::io::Write;
 use std::str;
 /// General enums in SQL
-#[derive(Debug, Clone, Copy, RustcDecodable, RustcEncodable, PartialEq)]
+#[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]
 pub enum SqlType {
     Int,
     Bool,
@@ -268,7 +271,7 @@ impl SqlType {
 //---------------------------------------------------------------
 
 /// A table column. Has a name, a type, ...
-#[derive(Debug, RustcDecodable, RustcEncodable, Clone)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Column {
     pub name: String,         // name of column
     pub sql_type: SqlType,    // name of the data type that is contained in this column

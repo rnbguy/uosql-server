@@ -5,8 +5,8 @@ use std::mem;
 
 use byteorder::{BigEndian, ReadBytesExt, WriteBytesExt};
 
-use bincode::rustc_serialize::{decode_from, encode_into};
-use bincode::SizeLimit;
+use bincode::{deserialize_from, serialize_into};
+use serde::{Deserialize, Serialize};
 
 use super::SqlType;
 
@@ -25,7 +25,7 @@ const VERSION_NO: u8 = 1;
 //---------------------------------------------------------------
 /// A Enum for Datatypes (will be removed later)
 #[repr(u8)]
-#[derive(Clone, Copy, Debug, RustcDecodable, RustcEncodable)]
+#[derive(Clone, Copy, Debug, Serialize, Deserialize)]
 pub enum DataType {
     Integer = 1,
     Float = 2,
@@ -110,7 +110,7 @@ impl Database {
 // TableMetaData
 //---------------------------------------------------------------
 
-#[derive(Debug, RustcDecodable, RustcEncodable)]
+#[derive(Debug, Serialize, Deserialize)]
 pub struct TableMetaData {
     version_nmbr: u8,
     engine_id: EngineID,
@@ -168,7 +168,7 @@ impl<'a> Table<'a> {
             info!("Magic Number not correct");
             return Err(Error::WrongMagicNmbr);
         }
-        let meta_data: TableMetaData = try!(decode_from(&mut file, SizeLimit::Infinite));
+        let meta_data: TableMetaData = try!(deserialize_from(&mut file));
         info!("getting meta data{:?}", meta_data);
 
         let table = Table::new(database, name, meta_data.columns, meta_data.engine_id);
@@ -188,7 +188,7 @@ impl<'a> Table<'a> {
         info!("writing magic number in file: {:?}", file);
         try!(file.write_u64::<BigEndian>(MAGIC_NUMBER)); //MAGIC_NUMBER
         info!("writing meta data in file: {:?}", file);
-        try!(encode_into(&self.meta_data, &mut file, SizeLimit::Infinite));
+        try!(serialize_into(&mut file, &self.meta_data));
 
         // debug message all okay
         info!("I Wrote my File");

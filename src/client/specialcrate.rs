@@ -155,12 +155,12 @@ pub fn snake() {
     initscr();
     cbreak(); // enable <Ctrl+C> to kill game
     noecho(); // don't show input
-    keypad(stdscr, true); // make keys work
+    keypad(stdscr(), true); // make keys work
     curs_set(CURSOR_VISIBILITY::CURSOR_INVISIBLE);
     timeout(100); // tick speed
 
     let mut bounds = Vector { x: 0, y: 0 };
-    getmaxyx(stdscr, &mut bounds.y, &mut bounds.x);
+    getmaxyx(stdscr(), &mut bounds.y, &mut bounds.x);
 
     let mut board = Board::new(bounds);
 
@@ -201,7 +201,7 @@ pub fn snake() {
 }
 
 fn draw_char(pos: &Vector, c: char) {
-    mvaddch(pos.y, pos.x, c as u64);
+    mvaddch(pos.y, pos.x, c as u32);
 }
 
 fn get_new_direction(prev_dir: Direction) -> Direction {
@@ -417,12 +417,12 @@ pub fn space_invaders() {
     initscr();
     cbreak(); // enable <Ctrl+C> to kill game
     noecho(); // don't show input
-    keypad(stdscr, true); // make keys work
+    keypad(stdscr(), true); // make keys work
     curs_set(CURSOR_VISIBILITY::CURSOR_INVISIBLE);
     timeout(1);
 
     let mut bounds = Vector { x: 0, y: 0 };
-    getmaxyx(stdscr, &mut bounds.y, &mut bounds.x);
+    getmaxyx(stdscr(), &mut bounds.y, &mut bounds.x);
 
     let mut game = Box::new(Game::new(bounds));
 
