@@ -20,7 +20,7 @@ use std::net::{Ipv4Addr, SocketAddrV4};
 pub struct Config {
     pub address: Ipv4Addr,
     pub port: u16,
-    pub dir: String
+    pub dir: String,
 }
 
 /// Listens for incoming TCP streams
@@ -37,14 +37,12 @@ pub fn listen(config: Config) {
         match stream {
             Ok(stream) => {
                 // Connection succeeded: Spawn thread and handle
-                thread::spawn(move|| {
-                    conn::handle(stream)
-                });
-            },
+                thread::spawn(move || conn::handle(stream));
+            }
             Err(e) => {
                 // Something went wrong...
                 warn!("Failed to accept incoming connection: {:?}", e);
-            },
+            }
         }
     }
 }

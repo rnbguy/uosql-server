@@ -1,11 +1,11 @@
-use std::vec::Vec;
-use super::Error;
-use super::types::Column;
-use std::io::{Write, Read, Seek, SeekFrom, Cursor};
 use super::super::parse::ast::CompType;
+use super::types::Column;
+use super::Error;
+use std::io::{Cursor, Read, Seek, SeekFrom, Write};
+use std::vec::Vec;
 
 #[derive(Debug)]
-pub struct Rows <B: Write + Read + Seek> {
+pub struct Rows<B: Write + Read + Seek> {
     data_src: B,
     pub columns: Vec<Column>,
     columns_size: u64,
@@ -14,8 +14,7 @@ pub struct Rows <B: Write + Read + Seek> {
 }
 
 /// Represents the lines read from file.
-impl<B: Write + Read + Seek> Rows <B> {
-
+impl<B: Write + Read + Seek> Rows<B> {
     pub fn new(data_src: B, columns: &[Column]) -> Rows<B> {
         let mut column_offsets = Vec::<u64>::new();
         let mut offset: u64 = 0;
@@ -24,12 +23,13 @@ impl<B: Write + Read + Seek> Rows <B> {
             offset += c.get_size() as u64;
         }
 
-        Rows {  data_src: data_src,
-                columns: columns.to_vec(),
-                columns_size: Self::get_columns_size(columns),
-                column_offsets: column_offsets,
-                pos: 0
-            }
+        Rows {
+            data_src: data_src,
+            columns: columns.to_vec(),
+            columns_size: Self::get_columns_size(columns),
+            column_offsets: column_offsets,
+            pos: 0,
+        }
     }
     /// returns the sum of the column sizes
     fn get_columns_size(columns: &[Column]) -> u64 {
@@ -44,9 +44,11 @@ impl<B: Write + Read + Seek> Rows <B> {
     /// The search begins with the first row located before position.
     /// An error is returned if no row could be found.
     /// Moves cursor to the end of the read row.
-    fn get_last_row(&mut self, position: SeekFrom, ignore_deleted_rows: bool)
-        -> Result <Vec<u8>, Error>
-    {
+    fn get_last_row(
+        &mut self,
+        position: SeekFrom,
+        ignore_deleted_rows: bool,
+    ) -> Result<Vec<u8>, Error> {
         try!(self.set_pos(position));
         try!(self.prev_row());
 
@@ -64,9 +66,7 @@ impl<B: Write + Read + Seek> Rows <B> {
     /// Tests if the row after the cursor is marked as deleted
     /// restore_cursor: if true, calling the function will move the cursor,
     /// if false, the cursor will be moved by row_header.size() bytes.
-    fn is_next_row_deleted(&mut self, restore_cursor: bool)
-        -> Result <bool, Error>
-    {
+    fn is_next_row_deleted(&mut self, restore_cursor: bool) -> Result<bool, Error> {
         info!("Reading Header");
         let row_header: RowHeader = try!(self.read_header());
         info!("Header Read");
@@ -89,9 +89,7 @@ impl<B: Write + Read + Seek> Rows <B> {
     /// and writes the data into target_buf
     /// returns the bytes read or an Error otherwise.
     /// Returns Error:EndOfFile if no next row could be read.
-    pub fn next_row<W: Write>(&mut self, mut target_buf: &mut W)
-        -> Result<u64, Error>
-    {
+    pub fn next_row<W: Write>(&mut self, mut target_buf: &mut W) -> Result<u64, Error> {
         self.next_row_ex(target_buf, true)
     }
 
@@ -100,9 +98,11 @@ impl<B: Write + Read + Seek> Rows <B> {
     /// returns the bytes read or an Error otherwise.
     /// Returns Error:EndOfFile if no next row could be read.
     /// if ignore_deleted_rows == true, deleted rows will be skipped.
-    fn next_row_ex<W: Write>(&mut self, mut target_buf: &mut W, ignore_deleted_rows: bool)
-        -> Result<u64, Error>
-    {
+    fn next_row_ex<W: Write>(
+        &mut self,
+        mut target_buf: &mut W,
+        ignore_deleted_rows: bool,
+    ) -> Result<u64, Error> {
         info!("Moving to next row.");
         let mut target_vec = Vec::<u8>::new();
         let columns_size = self.columns_size;
@@ -154,15 +154,15 @@ impl<B: Write + Read + Seek> Rows <B> {
             Ok(n) => {
                 self.pos = n;
                 Ok(n)
-            },
-            Err(e) => return Err(Error::Io(e))
+            }
+            Err(e) => return Err(Error::Io(e)),
         }
     }
 
     /// reads the header of the current row
     /// moves the cursor past the header
     /// returns an error if no RowHeader exists
-    fn read_header(&mut self) -> Result <RowHeader, Error> {
+    fn read_header(&mut self) -> Result<RowHeader, Error> {
         let mut target_buf = Vec::<u8>::new();
         try!(self.read_bytes(RowHeader::size(), &mut target_buf));
         Ok(RowHeader::new(target_buf[0]))
@@ -201,9 +201,9 @@ impl<B: Write + Read + Seek> Rows <B> {
             // find first deleted row
             move_result = self.move_to_next_deleted_row();
             match move_result {
-                Ok(_) => { },
+                Ok(_) => {}
                 Err(Error::EndOfFile) => break, // No deleted row found.
-                Err(e) => return Err(e)
+                Err(e) => return Err(e),
             };
 
             saved_pos = self.pos; // pos before deleted row.
@@ -223,17 +223,15 @@ impl<B: Write + Read + Seek> Rows <B> {
                     // Cursor is located after the first not deleted line.
                     return Ok(self.pos);
                 };
-                last_row_seek_from =
-                    SeekFrom::Start(self.pos - self.get_row_size());
+                last_row_seek_from = SeekFrom::Start(self.pos - self.get_row_size());
                 try!(self.set_pos(SeekFrom::Start(saved_pos)));
                 try!(self.add_row(&row_data));
-            }
-            else {
+            } else {
                 // gelöschte Zeile gefunden && !last_row found
                 try!(self.set_pos(SeekFrom::Start(saved_pos)));
                 return Ok(self.pos);
             }
-        };
+        }
         Err(Error::InvalidState)
     }
 
@@ -251,8 +249,7 @@ impl<B: Write + Read + Seek> Rows <B> {
     }
 
     /// Sets value of column_index' column to new_value.
-    fn set_value(&self, row_data: &mut[u8], new_value: &[u8], column_index: usize)
-    {
+    fn set_value(&self, row_data: &mut [u8], new_value: &[u8], column_index: usize) {
         // start index of column
         let s = self.column_offsets[column_index] as usize;
         // end index of column
@@ -271,9 +268,11 @@ impl<B: Write + Read + Seek> Rows <B> {
 
     /// reads the specified amount of bytes and writes them into target_buf
     /// returns bytes_read or error if bytes_read != bytes_to_read
-    fn read_bytes(&mut self, bytes_to_read: u64, mut target_buf: &mut Vec<u8>)
-        -> Result<u64, Error>
-    {
+    fn read_bytes(
+        &mut self,
+        bytes_to_read: u64,
+        mut target_buf: &mut Vec<u8>,
+    ) -> Result<u64, Error> {
         info!("Reading Bytes");
         let mut reader = (&mut self.data_src).take(bytes_to_read);
         let result = reader.read_to_end(&mut target_buf);
@@ -287,7 +286,7 @@ impl<B: Write + Read + Seek> Rows <B> {
                     return Err(Error::InterruptedRead);
                 };
                 n
-            },
+            }
             Err(e) => {
                 return Err(Error::Io(e));
             }
@@ -299,11 +298,9 @@ impl<B: Write + Read + Seek> Rows <B> {
     /// writes data to data_src
     /// returns bytes written
     fn write_bytes(&mut self, data: &[u8]) -> Result<u64, Error> {
-            match self.data_src.write_all(data) {
-            Ok(_) => {
-                return Ok(data.len() as u64)
-            },
-            Err(e) => return Err(Error::Io(e))
+        match self.data_src.write_all(data) {
+            Ok(_) => return Ok(data.len() as u64),
+            Err(e) => return Err(Error::Io(e)),
         }
     }
 
@@ -330,7 +327,7 @@ impl<B: Write + Read + Seek> Rows <B> {
                             pks.push(count);
                         }
                         count += 1;
-                    },
+                    }
                     None => break,
                 };
             }
@@ -355,7 +352,7 @@ impl<B: Write + Read + Seek> Rows <B> {
                         if try!(look.is_empty()) {
                             break;
                         }
-                    },
+                    }
                     None => break,
                 };
             }
@@ -369,9 +366,12 @@ impl<B: Write + Read + Seek> Rows <B> {
 
     /// deletes rows which fulfills a constraint
     /// return rows deleted
-    pub fn delete(&mut self, column_index: usize, value: (&[u8], Option<usize>), comp: CompType)
-        -> Result<u64, Error>
-    {
+    pub fn delete(
+        &mut self,
+        column_index: usize,
+        value: (&[u8], Option<usize>),
+        comp: CompType,
+    ) -> Result<u64, Error> {
         try!(self.reset_pos());
         let mut count = 0;
         loop {
@@ -379,12 +379,12 @@ impl<B: Write + Read + Seek> Rows <B> {
                 Ok(_) => {
                     count += 1;
                     try!(self.delete_row());
-                },
+                }
                 Err(Error::EndOfFile) => {
                     info!("reached end of file");
                     break;
-                },
-                Err(e) => return Err(e)
+                }
+                Err(e) => return Err(e),
             }
         }
         Ok(count)
@@ -399,10 +399,13 @@ impl<B: Write + Read + Seek> Rows <B> {
     /// returns the numer of rows updated.
     /// Panics if a row could not be updated. If modify fails, the updated row
     /// will be lost.
-    pub fn modify(&mut self, constraint_column_index: usize,
-        constraint_value: (&[u8], Option<usize>), comp: CompType,
-        values: &[(usize, &[u8])] )-> Result<u64, Error>
-    {
+    pub fn modify(
+        &mut self,
+        constraint_column_index: usize,
+        constraint_value: (&[u8], Option<usize>),
+        comp: CompType,
+        values: &[(usize, &[u8])],
+    ) -> Result<u64, Error> {
         info!("Modify rows values {:?}", values);
         try!(self.reset_pos());
         let mut updated_rows: u64 = 0;
@@ -415,20 +418,20 @@ impl<B: Write + Read + Seek> Rows <B> {
 
         // loop through rows.
         loop {
-            row_data = match self.get_next_row(constraint_column_index,
-                                               constraint_value,
-                                               comp) {
+            row_data = match self.get_next_row(constraint_column_index, constraint_value, comp) {
                 Ok(r) => r,
                 Err(Error::EndOfFile) => break,
-                Err(e) => return Err(e)
+                Err(e) => return Err(e),
             };
 
             try!(self.prev_row());
 
             for kvp in values {
-                self.set_value(&mut row_data,
-                             &kvp.1, // new_value
-                             kvp.0); // column_index
+                self.set_value(
+                    &mut row_data,
+                    &kvp.1, // new_value
+                    kvp.0,
+                ); // column_index
             }
 
             try!(self.add_row(&row_data));
@@ -441,9 +444,12 @@ impl<B: Write + Read + Seek> Rows <B> {
     /// Returns an new Rows object with all rows which fulfill the constraint.
     /// column_index: index of the column whose value should match value
     /// comp: defines how the value of the column and value should be compared.
-    pub fn lookup(&mut self, column_index: usize, value: (&[u8], Option<usize>), comp: CompType)
-        -> Result<Rows<Cursor<Vec<u8>>>, Error>
-    {
+    pub fn lookup(
+        &mut self,
+        column_index: usize,
+        value: (&[u8], Option<usize>),
+        comp: CompType,
+    ) -> Result<Rows<Cursor<Vec<u8>>>, Error> {
         try!(self.reset_pos());
         let vec: Vec<u8> = Vec::new();
         let cursor = Cursor::new(vec);
@@ -453,14 +459,14 @@ impl<B: Write + Read + Seek> Rows <B> {
             let result = self.get_next_row(column_index, value, comp);
             match result {
                 Ok(r) => {
-                    info!{"Row: {:?}", r};
+                    info! {"Row: {:?}", r};
                     try!(rows.add_row(&r));
-                },
+                }
                 Err(Error::EndOfFile) => {
                     info!("reached end of file");
                     break;
                 }
-                Err(e) => return Err(e)
+                Err(e) => return Err(e),
             }
         }
         Ok(rows)
@@ -478,13 +484,13 @@ impl<B: Write + Read + Seek> Rows <B> {
         loop {
             match self.next_row(&mut buf) {
                 Ok(_) => {
-                        try!(rows.add_row(& buf));
-                        info!(".");
-                        //info!("buf: {:?}", &buf);
-                        buf.clear();
-                },
+                    try!(rows.add_row(&buf));
+                    info!(".");
+                    //info!("buf: {:?}", &buf);
+                    buf.clear();
+                }
                 Err(Error::EndOfFile) => break,
-                Err(e) => { return Err(e) }
+                Err(e) => return Err(e),
             }
         }
         info!("finished full scan ....");
@@ -493,7 +499,7 @@ impl<B: Write + Read + Seek> Rows <B> {
 
     /// checks if object is containing rows
     /// returns bool on success else Error
-    pub fn is_empty(&mut self) -> Result <bool, Error> {
+    pub fn is_empty(&mut self) -> Result<bool, Error> {
         let old_pos = self.pos;
 
         let result: Result<bool, Error> = match self.set_pos(SeekFrom::End(0)) {
@@ -503,10 +509,8 @@ impl<B: Write + Read + Seek> Rows <B> {
                 } else {
                     Ok(false)
                 }
-            },
-            Err(e) => {
-                Err(e)
-            },
+            }
+            Err(e) => Err(e),
         };
         self.pos = old_pos;
         result
@@ -515,11 +519,12 @@ impl<B: Write + Read + Seek> Rows <B> {
     /// moves the cursor from the current position the row after the first row
     /// which fulfills the constraint.
     /// Returns the first row which fulfilly the condition.
-    pub fn get_next_row(&mut self, column_index: usize,
-                         value: (&[u8], Option<usize>),
-                          comp: CompType)
-    -> Result<Vec<u8>, Error>
-    {
+    pub fn get_next_row(
+        &mut self,
+        column_index: usize,
+        value: (&[u8], Option<usize>),
+        comp: CompType,
+    ) -> Result<Vec<u8>, Error> {
         let mut row = Vec::<u8>::new();
         let mut b = true;
 
@@ -548,12 +553,9 @@ impl<B: Write + Read + Seek> Rows <B> {
                             row.clear();
                             true
                         }
-
                     }
-                },
-                Err(e) => {
-                    return Err(e)
                 }
+                Err(e) => return Err(e),
             }
         }
         Ok(row)
@@ -576,37 +578,37 @@ impl<B: Write + Read + Seek> Rows <B> {
         try!(self.reset_pos());
         let mut data = Vec::<u8>::new();
         let mut row_data;
-        let mut result:Result<u64, Error>;
+        let mut result: Result<u64, Error>;
 
         loop {
             row_data = Vec::<u8>::new();
             result = self.next_row(&mut row_data);
             match result {
-                Ok(_) => { },
+                Ok(_) => {}
                 Err(Error::EndOfFile) => {
                     break;
-                },
-                Err(e) => return Err(e)
+                }
+                Err(e) => return Err(e),
             };
             data.extend(row_data.into_iter())
         }
 
-        Ok(ResultSet { data: data, columns: self.columns.clone() })
+        Ok(ResultSet {
+            data: data,
+            columns: self.columns.clone(),
+        })
     }
 }
 
 /// Representation of a RowHeader
 pub struct RowHeader {
-     pub data: u8,
+    pub data: u8,
 }
 
-impl RowHeader{
-
+impl RowHeader {
     pub fn new(deleted: u8) -> RowHeader {
         let data = 0 as u8;
-        let mut h = RowHeader {
-            data: data,
-        };
+        let mut h = RowHeader { data: data };
         h.set_deleted(deleted);
         h
     }
@@ -622,8 +624,7 @@ impl RowHeader{
         info!("set delete bit");
         if value == 1 {
             self.data |= 1 as u8
-        }
-        else {
+        } else {
             self.data &= 0xFE as u8
         }
     }

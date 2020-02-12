@@ -1,32 +1,30 @@
 //! Storage Engine trait and several implementations
 //!
 //!
+pub mod bstar;
 mod engine;
 mod meta;
 pub mod types;
-pub mod bstar;
 
 mod data;
 
-use bincode::rustc_serialize::{EncodingError, DecodingError};
+use bincode::rustc_serialize::{DecodingError, EncodingError};
 
-pub use self::meta::Table;
-pub use self::meta::Database;
-pub use self::data::Rows;
 pub use self::data::ResultSet;
+pub use self::data::Rows;
+pub use self::engine::FlatFile;
+pub use self::meta::Database;
+pub use self::meta::Table;
 pub use self::types::Column;
 pub use self::types::SqlType;
-pub use self::engine::FlatFile;
 
 pub use parse::ast;
 pub use parse::ast::CompType;
 
-
-
+use std::ffi::NulError;
 use std::io;
 use std::io::Cursor;
 use std::str::Utf8Error;
-use std::ffi::NulError;
 pub use std::string::FromUtf8Error;
 /// A database table
 ///
@@ -71,7 +69,6 @@ impl From<NulError> for Error {
     }
 }
 
-
 impl From<Utf8Error> for Error {
     fn from(err: Utf8Error) -> Error {
         Error::Utf8StrError(err)
@@ -84,14 +81,13 @@ impl From<FromUtf8Error> for Error {
     }
 }
 
-
 impl From<io::Error> for Error {
     fn from(err: io::Error) -> Error {
         Error::Io(err)
     }
 }
 
-impl  From<EncodingError> for Error {
+impl From<EncodingError> for Error {
     fn from(err: EncodingError) -> Error {
         Error::BinEn(err)
     }
@@ -128,17 +124,29 @@ pub trait Engine {
 
     fn full_scan(&self) -> Result<Rows<Cursor<Vec<u8>>>, Error>;
 
-    fn lookup(&self, column_index: usize, value: (&[u8], Option<usize>) , comp: CompType)
-    -> Result<Rows<Cursor<Vec<u8>>>, Error>;
+    fn lookup(
+        &self,
+        column_index: usize,
+        value: (&[u8], Option<usize>),
+        comp: CompType,
+    ) -> Result<Rows<Cursor<Vec<u8>>>, Error>;
 
     fn insert_row(&mut self, row_data: &[u8]) -> Result<u64, Error>;
 
-    fn delete(&self, column_index: usize, value: (&[u8], Option<usize>), comp: CompType)
-    -> Result<u64, Error>;
+    fn delete(
+        &self,
+        column_index: usize,
+        value: (&[u8], Option<usize>),
+        comp: CompType,
+    ) -> Result<u64, Error>;
 
-    fn modify(&mut self, constraint_column_index: usize,
-     constraint_value: (&[u8], Option<usize>), comp: CompType,
-     values: &[(usize, &[u8])] )-> Result<u64, Error>;
+    fn modify(
+        &mut self,
+        constraint_column_index: usize,
+        constraint_value: (&[u8], Option<usize>),
+        comp: CompType,
+        values: &[(usize, &[u8])],
+    ) -> Result<u64, Error>;
 
     fn reorganize(&mut self) -> Result<(), Error>;
 
@@ -146,13 +154,12 @@ pub trait Engine {
 }
 
 #[repr(u8)]
-#[derive(Clone,Copy,Debug,RustcDecodable, RustcEncodable)]
+#[derive(Clone, Copy, Debug, RustcDecodable, RustcEncodable)]
 pub enum EngineID {
     FlatFile = 1,
     InvertedIndex,
     BStar,
 }
-
 
 // # Some information for the `storage` working group:
 //

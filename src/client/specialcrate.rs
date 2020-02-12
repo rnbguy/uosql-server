@@ -8,7 +8,10 @@ extern crate rand;
 
 use self::rand::Rng;
 
-pub enum GameError { Wall, Suicide }
+pub enum GameError {
+    Wall,
+    Suicide,
+}
 
 #[derive(PartialEq, Copy)]
 pub struct Vector {
@@ -17,7 +20,7 @@ pub struct Vector {
 }
 
 impl Vector {
-    fn next (&self, dir: Direction) -> Vector {
+    fn next(&self, dir: Direction) -> Vector {
         let (dx, dy) = match dir {
             Direction::Up => (0, -1),
             Direction::Down => (0, 1),
@@ -31,19 +34,21 @@ impl Vector {
         }
     }
 
-    fn random (bounds: Vector) -> Vector {
+    fn random(bounds: Vector) -> Vector {
         let mut rng = rand::thread_rng();
         Vector {
-            x: rng.gen_range::<>(0, bounds.x),
-            y: rng.gen_range::<>(0, bounds.y),
+            x: rng.gen_range(0, bounds.x),
+            y: rng.gen_range(0, bounds.y),
         }
     }
 }
 
 impl Clone for Vector {
-
     fn clone(&self) -> Self {
-        Vector { x : self.x, y : self.y}
+        Vector {
+            x: self.x,
+            y: self.y,
+        }
     }
 
     fn clone_from(&mut self, source: &Self) {
@@ -59,21 +64,22 @@ pub struct Board {
 }
 
 impl Board {
-
-    pub fn new (bounds: Vector) -> Board {
+    pub fn new(bounds: Vector) -> Board {
         Board {
             bounds: bounds,
-            snake: Snake::new(Vector { x: bounds.x / 2, y: bounds.y / 2 }),
+            snake: Snake::new(Vector {
+                x: bounds.x / 2,
+                y: bounds.y / 2,
+            }),
             bullet: Vector::random(bounds),
         }
     }
 
-    pub fn set_direction (&mut self, dir: Direction) {
+    pub fn set_direction(&mut self, dir: Direction) {
         self.snake.direction = dir;
     }
 
-    pub fn tick (&mut self) -> Result<(), GameError> {
-
+    pub fn tick(&mut self) -> Result<(), GameError> {
         self.snake.step();
 
         if self.snake.eats_bullet(self.bullet) {
@@ -90,12 +96,12 @@ impl Board {
         }
     }
 
-    pub fn get_snake_vectors (&self) -> &[Vector] {
+    pub fn get_snake_vectors(&self) -> &[Vector] {
         let ref v = self.snake.segments;
         &v[..]
     }
 
-    pub fn get_bullet_vector (&self) -> &Vector {
+    pub fn get_bullet_vector(&self) -> &Vector {
         &self.bullet
     }
 }
@@ -107,35 +113,34 @@ struct Snake {
 }
 
 impl Snake {
-
-    fn new (pos: Vector) -> Snake {
+    fn new(pos: Vector) -> Snake {
         Snake {
-            segments: vec!(pos),
+            segments: vec![pos],
             direction: Direction::Up,
-            popped_segment: Vector { x: 0, y: 0 }
+            popped_segment: Vector { x: 0, y: 0 },
         }
     }
 
-    fn step (&mut self) {
+    fn step(&mut self) {
         let new_head = self.segments[0].next(self.direction);
         self.segments.insert(0, new_head);
         self.popped_segment = self.segments.pop().unwrap();
     }
 
-    fn hits_wall (&self, bounds: Vector) -> bool {
+    fn hits_wall(&self, bounds: Vector) -> bool {
         let head = self.segments[0];
         head.x < 0 || head.x == bounds.x || head.y < 0 || head.y == bounds.y
     }
 
-    fn hits_itself (&self) -> bool {
-        self.segments.iter().skip(1).any(|s| *s == self.segments[0] )
+    fn hits_itself(&self) -> bool {
+        self.segments.iter().skip(1).any(|s| *s == self.segments[0])
     }
 
-    fn grow (&mut self) {
+    fn grow(&mut self) {
         self.segments.push(self.popped_segment);
     }
 
-    fn eats_bullet (&self, bullet: Vector) -> bool {
+    fn eats_bullet(&self, bullet: Vector) -> bool {
         self.segments[0] == bullet
     }
 }
@@ -143,11 +148,10 @@ impl Snake {
 // This was the code in main.rs
 extern crate ncurses;
 
-use std::thread::sleep_ms as sleep;
 use self::ncurses::*;
+use std::thread::sleep_ms as sleep;
 
-pub fn snake()
-{
+pub fn snake() {
     initscr();
     cbreak(); // enable <Ctrl+C> to kill game
     noecho(); // don't show input
@@ -180,7 +184,6 @@ pub fn snake()
         direction = get_new_direction(direction);
         board.set_direction(direction);
 
-
         match board.tick() {
             Err(err) => {
                 match err {
@@ -190,18 +193,18 @@ pub fn snake()
                 //let two_secs = Duration::new(2, 0);
                 sleep(2000);
                 break;
-            },
+            }
             Ok(_) => (),
         };
     }
     endwin();
 }
 
-fn draw_char (pos: &Vector, c: char) {
+fn draw_char(pos: &Vector, c: char) {
     mvaddch(pos.y, pos.x, c as u64);
 }
 
-fn get_new_direction (prev_dir: Direction) -> Direction {
+fn get_new_direction(prev_dir: Direction) -> Direction {
     match getch() {
         KEY_UP if prev_dir != Direction::Down => Direction::Up,
         KEY_DOWN if prev_dir != Direction::Up => Direction::Down,
@@ -211,7 +214,7 @@ fn get_new_direction (prev_dir: Direction) -> Direction {
     }
 }
 
-fn show_text (s: &str) {
+fn show_text(s: &str) {
     erase();
     addstr(s);
     refresh();
@@ -219,10 +222,19 @@ fn show_text (s: &str) {
 
 // Below is space invaders code
 
-#[derive(PartialEq,Copy,Clone)]
-pub enum Direction { Up, Down, Left, Right }
+#[derive(PartialEq, Copy, Clone)]
+pub enum Direction {
+    Up,
+    Down,
+    Left,
+    Right,
+}
 
-pub enum GameStatus { Win, Running, Dead }
+pub enum GameStatus {
+    Win,
+    Running,
+    Dead,
+}
 
 pub struct Game {
     bounds: Vector,
@@ -232,25 +244,25 @@ pub struct Game {
 }
 
 impl Game {
-
-    pub fn new (bounds: Vector) -> Game {
-
-        let mut invaders = vec!();
+    pub fn new(bounds: Vector) -> Game {
+        let mut invaders = vec![];
         //for i in range(0i32, bounds.x / 3) {
         for i in 0i32..(bounds.x / 3) {
-            invaders.push(Invader::new( Vector { x: 2 * i, y: 0 }));
+            invaders.push(Invader::new(Vector { x: 2 * i, y: 0 }));
         }
 
         Game {
             bounds: bounds,
             invaders: invaders,
-            player: Player::new(Vector { x: bounds.x / 2, y: bounds.y - 1 }),
-            bullets: vec!(),
+            player: Player::new(Vector {
+                x: bounds.x / 2,
+                y: bounds.y - 1,
+            }),
+            bullets: vec![],
         }
     }
 
-    pub fn tick (&mut self) -> GameStatus {
-
+    pub fn tick(&mut self) -> GameStatus {
         for invader in self.invaders.iter_mut() {
             match invader.give_chance_to_fire() {
                 Some(bullet) => self.bullets.push(bullet),
@@ -262,7 +274,8 @@ impl Game {
         for bullet in self.bullets.iter_mut() {
             bullet.tick(self.bounds);
 
-            self.invaders.retain(|i| !bullet.check_collision(i.position));
+            self.invaders
+                .retain(|i| !bullet.check_collision(i.position));
 
             if bullet.check_collision(self.player.position) {
                 return GameStatus::Dead;
@@ -276,23 +289,23 @@ impl Game {
         }
     }
 
-    pub fn shift (&mut self, dir: Direction) {
+    pub fn shift(&mut self, dir: Direction) {
         self.player.shift(dir, self.bounds);
     }
 
-    pub fn fire (&mut self) {
+    pub fn fire(&mut self) {
         self.bullets.push(self.player.fire());
     }
 
-    pub fn get_player_vector (&self) -> &Vector {
+    pub fn get_player_vector(&self) -> &Vector {
         &self.player.position
     }
 
-    pub fn get_invader_vectors (&self) -> Vec<Vector> {
+    pub fn get_invader_vectors(&self) -> Vec<Vector> {
         self.invaders.iter().map(|i| i.position).collect()
     }
 
-    pub fn get_bullet_vectors (&self) -> Vec<Vector> {
+    pub fn get_bullet_vectors(&self) -> Vec<Vector> {
         self.bullets.iter().map(|b| b.position).collect()
     }
 }
@@ -303,20 +316,19 @@ struct Invader {
 }
 
 impl Invader {
-
-    fn new (pos: Vector) -> Invader {
+    fn new(pos: Vector) -> Invader {
         Invader {
             position: pos,
             direction: Direction::Left,
         }
     }
 
-    fn tick (&mut self, bounds: Vector) {
+    fn tick(&mut self, bounds: Vector) {
         let x = &mut self.position.x;
         self.direction = match self.direction {
             Direction::Left if *x < 0 => Direction::Right,
             Direction::Right if *x == bounds.x => Direction::Left,
-            _ => self.direction.clone()
+            _ => self.direction.clone(),
         };
         match self.direction {
             Direction::Left => *x = *x - 1,
@@ -325,12 +337,17 @@ impl Invader {
         };
     }
 
-    fn give_chance_to_fire (&self) -> Option<Bullet> {
+    fn give_chance_to_fire(&self) -> Option<Bullet> {
         let mut rng = rand::thread_rng();
         let temp: f32 = rng.gen_range(0.0, 1.0);
         if temp > 0.996 {
-            Some(Bullet::new(Vector { x: self.position.x,
-                y: self.position.y + 1 }, Direction::Down))
+            Some(Bullet::new(
+                Vector {
+                    x: self.position.x,
+                    y: self.position.y + 1,
+                },
+                Direction::Down,
+            ))
         } else {
             None
         }
@@ -342,12 +359,11 @@ struct Player {
 }
 
 impl Player {
-
-    fn new (pos: Vector) -> Player {
+    fn new(pos: Vector) -> Player {
         Player { position: pos }
     }
 
-    fn shift (&mut self, dir: Direction, bounds: Vector) {
+    fn shift(&mut self, dir: Direction, bounds: Vector) {
         let x = &mut self.position.x;
         match dir {
             Direction::Left if *x > 0 => *x = *x - 1,
@@ -356,8 +372,14 @@ impl Player {
         }
     }
 
-    fn fire (&self) -> Bullet {
-        Bullet::new(Vector { x: self.position.x, y: self.position.y - 1 }, Direction::Up)
+    fn fire(&self) -> Bullet {
+        Bullet::new(
+            Vector {
+                x: self.position.x,
+                y: self.position.y - 1,
+            },
+            Direction::Up,
+        )
     }
 }
 
@@ -367,15 +389,14 @@ struct Bullet {
 }
 
 impl Bullet {
-
-    fn new (pos: Vector, dir: Direction) -> Bullet {
+    fn new(pos: Vector, dir: Direction) -> Bullet {
         Bullet {
             position: pos,
             direction: dir,
         }
     }
 
-    fn tick (&mut self, bounds: Vector) {
+    fn tick(&mut self, bounds: Vector) {
         match self.direction {
             Direction::Up => self.position.y -= 1,
             Direction::Down => self.position.y += 1,
@@ -386,14 +407,13 @@ impl Bullet {
         }
     }
 
-    fn check_collision (&self, other: Vector) -> bool {
+    fn check_collision(&self, other: Vector) -> bool {
         self.position == other
     }
 }
 
 // blow is code from main.rs
-pub fn space_invaders()
-{
+pub fn space_invaders() {
     initscr();
     cbreak(); // enable <Ctrl+C> to kill game
     noecho(); // don't show input
@@ -401,7 +421,7 @@ pub fn space_invaders()
     curs_set(CURSOR_VISIBILITY::CURSOR_INVISIBLE);
     timeout(1);
 
-    let mut bounds = Vector { x: 0, y: 0};
+    let mut bounds = Vector { x: 0, y: 0 };
     getmaxyx(stdscr, &mut bounds.y, &mut bounds.x);
 
     let mut game = Box::new(Game::new(bounds));
@@ -447,12 +467,12 @@ pub fn space_invaders()
                     show_text("Puny human!");
                     sleep(2000);
                     break;
-                },
+                }
                 GameStatus::Win => {
                     show_text("Garglargl");
                     sleep(2000);
                     break;
-                },
+                }
                 GameStatus::Running => (),
             };
         }

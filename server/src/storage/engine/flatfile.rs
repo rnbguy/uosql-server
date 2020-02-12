@@ -1,9 +1,9 @@
-use super::super::meta::{Table};
-use super::super::{Engine, Error};
-use std::fs::{OpenOptions, File};
-use std::io::{Write, Read, Cursor};
 use super::super::super::parse::ast::CompType;
-use super::super::data::{Rows};
+use super::super::data::Rows;
+use super::super::meta::Table;
+use super::super::{Engine, Error};
+use std::fs::{File, OpenOptions};
+use std::io::{Cursor, Read, Write};
 //---------------------------------------------------------------
 // FlatFile-Engine
 //---------------------------------------------------------------
@@ -32,8 +32,10 @@ impl<'a> FlatFile<'a> {
 
     /// return a rows object with the table.dat file as data_src
     pub fn get_reader(&self) -> Result<Rows<File>, Error> {
-        Ok(Rows::new(try!(self.open_file_rw()),
-                     &self.table.meta_data.columns))
+        Ok(Rows::new(
+            try!(self.open_file_rw()),
+            &self.table.meta_data.columns,
+        ))
     }
 }
 
@@ -69,9 +71,12 @@ impl<'a> Engine for FlatFile<'a> {
     }
 
     /// returns an new Rows object which fulfills a constraint
-    fn lookup(&self, column_index: usize, value: (&[u8], Option<usize>), comp: CompType)
-    -> Result<Rows<Cursor<Vec<u8>>>, Error>
-    {
+    fn lookup(
+        &self,
+        column_index: usize,
+        value: (&[u8], Option<usize>),
+        comp: CompType,
+    ) -> Result<Rows<Cursor<Vec<u8>>>, Error> {
         let mut reader = try!(self.get_reader());
         reader.lookup(column_index, value, comp)
     }
@@ -85,18 +90,24 @@ impl<'a> Engine for FlatFile<'a> {
 
     /// delete rows which fulfills a constraint
     /// returns amount of deleted rows
-    fn delete(&self, column_index: usize, value: (&[u8], Option<usize>), comp: CompType)
-    -> Result<u64, Error>
-    {
+    fn delete(
+        &self,
+        column_index: usize,
+        value: (&[u8], Option<usize>),
+        comp: CompType,
+    ) -> Result<u64, Error> {
         info!("Delete row");
         let mut reader = try!(self.get_reader());
         reader.delete(column_index, value, comp)
     }
 
-    fn modify(&mut self, constraint_column_index: usize,
-    constraint_value: (&[u8], Option<usize>), comp: CompType,
-    values: &[(usize, &[u8])] )-> Result<u64, Error>
-    {
+    fn modify(
+        &mut self,
+        constraint_column_index: usize,
+        constraint_value: (&[u8], Option<usize>),
+        comp: CompType,
+        values: &[(usize, &[u8])],
+    ) -> Result<u64, Error> {
         info!("modify row");
         let mut reader = try!(self.get_reader());
         reader.modify(constraint_column_index, constraint_value, comp, values)

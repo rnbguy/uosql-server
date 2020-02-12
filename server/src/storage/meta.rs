@@ -1,27 +1,24 @@
-use std::mem;
-use std::io::prelude::*;
 use std::fs;
-use std::fs::{OpenOptions, create_dir, remove_dir_all};
+use std::fs::{create_dir, remove_dir_all, OpenOptions};
+use std::io::prelude::*;
+use std::mem;
 
-use byteorder::{WriteBytesExt, ReadBytesExt, BigEndian};
+use byteorder::{BigEndian, ReadBytesExt, WriteBytesExt};
 
+use bincode::rustc_serialize::{decode_from, encode_into};
 use bincode::SizeLimit;
-use bincode::rustc_serialize::{encode_into, decode_from};
 
 use super::SqlType;
 
-use super::Engine;
-use super::Error;
 use super::engine::FlatFile;
 use super::types::Column;
+use super::Engine;
 use super::EngineID;
+use super::Error;
 
 /// constants
 const MAGIC_NUMBER: u64 = 0x49616D4372616E43;
 const VERSION_NO: u8 = 1;
-
-
-
 
 //---------------------------------------------------------------
 // DataType
@@ -29,11 +26,14 @@ const VERSION_NO: u8 = 1;
 /// A Enum for Datatypes (will be removed later)
 #[repr(u8)]
 #[derive(Clone, Copy, Debug, RustcDecodable, RustcEncodable)]
-pub enum DataType { Integer = 1, Float = 2, }
+pub enum DataType {
+    Integer = 1,
+    Float = 2,
+}
 
 impl DataType {
     pub fn _value(&self) -> u8 {
-       *self as u8
+        *self as u8
     }
 }
 
@@ -49,7 +49,9 @@ impl Database {
     /// Starts the process of creating a new Database
     /// Returns database or on fail Error
     pub fn create(name: &str) -> Result<Database, Error> {
-        let d = Database{ name: name.to_string() };
+        let d = Database {
+            name: name.to_string(),
+        };
         try!(d.save());
         info!("created new database {:?}", d);
         Ok(d)
@@ -60,10 +62,12 @@ impl Database {
     pub fn load(name: &str) -> Result<Database, Error> {
         if try!(fs::metadata(name)).is_dir() {
             info!("loaded Database {:?}", name.to_string());
-            Ok(Database{ name: name.to_string() })
+            Ok(Database {
+                name: name.to_string(),
+            })
         } else {
             warn!("could not load database {:?}", name.to_string());
-            return Err(Error::LoadDataBase)
+            return Err(Error::LoadDataBase);
         }
     }
 
@@ -83,9 +87,12 @@ impl Database {
     }
     /// Creates a new table in the DB folder
     /// Returns with Error on fail else Table
-    pub fn create_table(&self, name: &str, columns: Vec<Column>, engine_id: EngineID)
-        -> Result<Table, Error>
-    {
+    pub fn create_table(
+        &self,
+        name: &str,
+        columns: Vec<Column>,
+        engine_id: EngineID,
+    ) -> Result<Table, Error> {
         let t = Table::new(&self, name, columns, engine_id);
         try!(t.save());
         info!("created new table {:?}", t);
@@ -98,7 +105,6 @@ impl Database {
         Table::load(&self, name)
     }
 }
-
 
 //---------------------------------------------------------------
 // TableMetaData
@@ -126,11 +132,12 @@ pub struct Table<'a> {
 impl<'a> Table<'a> {
     /// Creates new table object
     /// Returns Table
-    pub fn new<'b>(database: &'b Database, name: &str,
-                   columns: Vec<Column>, engine_id: EngineID)
-        -> Table<'b>
-    {
-
+    pub fn new<'b>(
+        database: &'b Database,
+        name: &str,
+        columns: Vec<Column>,
+        engine_id: EngineID,
+    ) -> Table<'b> {
         let meta_data = TableMetaData {
             version_nmbr: VERSION_NO,
             engine_id: engine_id,
@@ -147,23 +154,19 @@ impl<'a> Table<'a> {
 
     /// Loads the table from the DB
     /// Returns with Error on fail else Table
-    fn load<'b>(database: &'b Database, name: &str)
-        -> Result<Table<'b>, Error>
-    {
+    fn load<'b>(database: &'b Database, name: &str) -> Result<Table<'b>, Error> {
         // TODO: Read the .tbl file from disk and parse it
 
         let path_to_table = Table::get_path(&database.name, name, "tbl");
         info!("getting path and opening file: {:?}", path_to_table);
-        let mut file = try!(OpenOptions::new()
-            .read(true)
-            .open(path_to_table));
+        let mut file = try!(OpenOptions::new().read(true).open(path_to_table));
         info!("reading file: {:?}", file);
         let ma_nmbr = try!(file.read_uint::<BigEndian>(mem::size_of_val(&MAGIC_NUMBER)));
 
         info!("checking magic number: {:?}", ma_nmbr);
         if ma_nmbr != MAGIC_NUMBER {
             info!("Magic Number not correct");
-            return Err(Error::WrongMagicNmbr)
+            return Err(Error::WrongMagicNmbr);
         }
         let meta_data: TableMetaData = try!(decode_from(&mut file, SizeLimit::Infinite));
         info!("getting meta data{:?}", meta_data);
@@ -183,7 +186,7 @@ impl<'a> Table<'a> {
             .create(true)
             .open(self.get_table_metadata_path()));
         info!("writing magic number in file: {:?}", file);
-        try!(file.write_u64::<BigEndian>(MAGIC_NUMBER));//MAGIC_NUMBER
+        try!(file.write_u64::<BigEndian>(MAGIC_NUMBER)); //MAGIC_NUMBER
         info!("writing meta data in file: {:?}", file);
         try!(encode_into(&self.meta_data, &mut file, SizeLimit::Infinite));
 
@@ -197,7 +200,6 @@ impl<'a> Table<'a> {
     /// if the user lacks permissions to remove the file,
     /// or if some other filesystem-level error occurs.
     pub fn delete(&self) -> Result<(), Error> {
-
         info!("remove meta file: {:?}", self.get_table_metadata_path());
         try!(fs::remove_file(self.get_table_metadata_path()));
 
@@ -220,17 +222,16 @@ impl<'a> Table<'a> {
         sql_type: SqlType,
         allow_null: bool,
         description: &str,
-        is_primary_key: bool
-        ) -> Result<(), Error> {
-
+        is_primary_key: bool,
+    ) -> Result<(), Error> {
         match self.meta_data.columns.iter().find(|x| x.name == name) {
             Some(_) => {
                 warn!("Column {:?} already exists", name);
-                return Err(Error::AddColumn)
-            },
+                return Err(Error::AddColumn);
+            }
             None => {
                 info!("Column {:?} was added", name);
-            },
+            }
         }
 
         self.meta_data.columns.push(Column::new(
@@ -238,8 +239,8 @@ impl<'a> Table<'a> {
             sql_type,
             allow_null,
             description,
-            is_primary_key)
-        );
+            is_primary_key,
+        ));
         Ok(())
     }
 
@@ -250,11 +251,11 @@ impl<'a> Table<'a> {
             Some(x) => {
                 info!("Column {:?} was removed", self.name);
                 x
-            },
+            }
             None => {
                 warn!("Column {:?} could not be found", self.name);
-                return Err(Error::RemoveColumn)
-            },
+                return Err(Error::RemoveColumn);
+            }
         };
         self.meta_data.columns.swap_remove(index);
         Ok(())
@@ -265,15 +266,9 @@ impl<'a> Table<'a> {
     pub fn create_engine(self) -> Box<Engine + 'a> {
         // add engines here
         match self.meta_data.engine_id {
-            EngineID::FlatFile => {
-                Box::new(FlatFile::new(self))
-            },
-            EngineID::InvertedIndex => {
-                Box::new(FlatFile::new(self))
-            },
-            EngineID::BStar => {
-                Box::new(FlatFile::new(self))
-            },
+            EngineID::FlatFile => Box::new(FlatFile::new(self)),
+            EngineID::InvertedIndex => Box::new(FlatFile::new(self)),
+            EngineID::BStar => Box::new(FlatFile::new(self)),
         }
     }
 
@@ -289,6 +284,6 @@ impl<'a> Table<'a> {
 
     /// Returns the path of the table
     fn get_path(database: &str, name: &str, ext: &str) -> String {
-         format!("{}/{}.{}", database, name, ext)
+        format!("{}/{}.{}", database, name, ext)
     }
 }

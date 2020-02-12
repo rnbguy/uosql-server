@@ -1,12 +1,12 @@
+use super::super::storage::SqlType;
 /// Top level type. Is returned by `parse`.
 use super::token;
-use super::super::storage::SqlType;
 use std::collections::HashMap;
 #[derive(Debug, Clone, PartialEq)]
 pub enum Query {
     Dummy, // For Compiling
     DefStmt(DefStmt),
-    ManipulationStmt(ManipulationStmt)
+    ManipulationStmt(ManipulationStmt),
 }
 
 /// All Data Definition Statements
@@ -14,7 +14,7 @@ pub enum Query {
 pub enum DefStmt {
     Create(CreateStmt),
     Alter(AltStmt),
-    Drop(DropStmt)
+    Drop(DropStmt),
 }
 
 /// All Data Manipulation Statements
@@ -39,9 +39,8 @@ pub enum CreateStmt {
 /// Split between alterable content (only Tables yet)
 #[derive(Debug, Clone, PartialEq)]
 pub enum AltStmt {
-    Table(AlterTableStmt)
-    //Column(String)
-    //View(String)
+    Table(AlterTableStmt), //Column(String)
+                           //View(String)
 }
 
 /// Split between drop-able content (only Tables yet)
@@ -49,12 +48,12 @@ pub enum AltStmt {
 pub enum DropStmt {
     Table(String),
     View(String),
-    Database(String)
+    Database(String),
 }
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum UseStmt {
-    Database(String)
+    Database(String),
 }
 
 /// Information for table creation
@@ -68,7 +67,7 @@ pub struct CreateTableStmt {
 pub struct CreateViewStmt {
     pub name: String,
     pub opt: bool, // OR REPLACE keyword
-    pub sel : SelectStmt,
+    pub sel: SelectStmt,
 }
 
 /// Information for column creation
@@ -86,7 +85,7 @@ pub struct ColumnInfo {
 #[derive(Debug, Clone, PartialEq)]
 pub struct AlterTableStmt {
     pub tid: String,
-    pub op: AlterOp
+    pub op: AlterOp,
 }
 
 /// Possible operations for table alterations
@@ -94,7 +93,7 @@ pub struct AlterTableStmt {
 pub enum AlterOp {
     Add(ColumnInfo),
     Drop(String),
-    Modify(ColumnInfo)
+    Modify(ColumnInfo),
 }
 
 /// Information for table update
@@ -103,7 +102,7 @@ pub struct UpdateStmt {
     pub tid: String,
     pub alias: HashMap<String, String>,
     pub set: Vec<Condition>,
-    pub conds: Option<Conditions>
+    pub conds: Option<Conditions>,
 }
 
 /// Information for data selection
@@ -134,8 +133,7 @@ pub enum Col {
     // select a specified column
     Specified(String),
     // for example: table.* => select every column in table
-    Every
-
+    Every,
 }
 
 /// Information for data output limiting
@@ -152,7 +150,7 @@ pub struct Limit {
 pub struct InsertStmt {
     pub tid: String,
     pub col: Vec<String>,
-    pub val: Vec<token::Lit>
+    pub val: Vec<token::Lit>,
 }
 
 /// Information for data deletion
@@ -160,7 +158,7 @@ pub struct InsertStmt {
 pub struct DeleteStmt {
     pub tid: String,
     pub alias: HashMap<String, String>,
-    pub cond: Option<Conditions>
+    pub cond: Option<Conditions>,
 }
 
 /// Additional operations for ordering and limiting
@@ -169,7 +167,7 @@ pub enum SpecOps {
     OrderByAsc(String),
     OrderByDesc(String),
     GroupBy(Vec<String>),
-    Limit(u32)
+    Limit(u32),
 }
 
 /// Conditions for managing AND/OR where-clauses
@@ -177,7 +175,7 @@ pub enum SpecOps {
 pub enum Conditions {
     Leaf(Condition),
     And(Box<Conditions>, Box<Conditions>),
-    Or(Box<Conditions>, Box<Conditions>)
+    Or(Box<Conditions>, Box<Conditions>),
 }
 
 /// Information for the where-clause
@@ -191,7 +189,7 @@ pub struct Condition {
     // and if there exists an alias in the sql statement
     // example: where p.name = s.name
     pub aliasrhs: Option<String>,
-    pub rhs: CondType
+    pub rhs: CondType,
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -209,7 +207,7 @@ pub enum CompType {
     GThan,
     SThan,
     GEThan,
-    SEThan
+    SEThan,
 }
 
 impl CompType {
@@ -229,7 +227,7 @@ impl CompType {
 #[derive(Debug, Clone, PartialEq)]
 pub enum CondType {
     Literal(token::Lit),
-    Word(String)
+    Word(String),
 }
 
 #[derive(Debug, PartialEq)]
@@ -239,12 +237,11 @@ pub enum DataSrc {
     Bool(u8),
 }
 
-
 /// Possible values for "Order By" keyword
 #[derive(Debug, Clone, PartialEq)]
 pub enum Order {
     Asc,
-    Desc
+    Desc,
 }
 
 impl DataSrc {
@@ -264,5 +261,4 @@ impl DataSrc {
     pub fn to_bool(input: u8) -> bool {
         input != 0
     }
-
 }

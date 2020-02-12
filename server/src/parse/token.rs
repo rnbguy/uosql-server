@@ -10,8 +10,8 @@ pub struct TokenSpan {
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum Lit {
-	String(String),
-	Int(i64),
+    String(String),
+    Int(i64),
     Float(f64),
     Bool(u8),
 }
@@ -34,14 +34,11 @@ impl Lit {
             &Lit::Bool(_) => SqlType::Bool,
         }
     }
-
-
 }
 
 /// A token: Everything the lexer can produce
 #[derive(Debug, Clone, PartialEq)]
 pub enum Token {
-
     Word(String),
 
     // detects literals
@@ -75,5 +72,5 @@ pub enum Token {
 
     Whitespace,
 
-    Unknown
+    Unknown,
 }

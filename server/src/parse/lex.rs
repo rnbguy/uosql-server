@@ -1,7 +1,7 @@
-use super::token::{Token, TokenSpan, Lit};
-use std::str::Chars;
+use super::token::{Lit, Token, TokenSpan};
 use super::Span;
-use std::iter::{Iterator};
+use std::iter::Iterator;
+use std::str::Chars;
 
 /// A lexer with its associated query, a char iterator, and
 /// positions (last, current, next)
@@ -12,11 +12,10 @@ pub struct Lexer<'a> {
     curr: Option<char>,
     curr_pos: Option<usize>,
     next: Option<char>,
-    span_start: Option<usize>
+    span_start: Option<usize>,
 }
 
 impl<'a> Lexer<'a> {
-
     /// New lexer, everything set to None
     pub fn from_query<'b>(query: &'b str) -> Lexer<'b> {
         let mut lex = Lexer {
@@ -26,7 +25,7 @@ impl<'a> Lexer<'a> {
             last_pos: None,
             next: None,
             span_start: None,
-            chs: query.chars()
+            chs: query.chars(),
         };
         lex.dbump();
         lex
@@ -34,12 +33,10 @@ impl<'a> Lexer<'a> {
 
     /// Bumper function advances to the next char
     fn bump(&mut self) {
-
         // advance all pointers to the next char
         self.last = self.curr;
         self.curr = self.next;
         self.next = self.chs.next();
-
 
         // Advance last_pos to position of current char
         self.last_pos = self.curr_pos;
@@ -50,7 +47,7 @@ impl<'a> Lexer<'a> {
             Some(c) => {
                 self.curr_pos = match self.curr_pos {
                     Some(n) => Some(n + c.len_utf8()),
-                    None => Some(c.len_utf8()) // Start at pos 0
+                    None => Some(c.len_utf8()), // Start at pos 0
                 }
             }
             _ => {}
@@ -70,15 +67,12 @@ impl<'a> Lexer<'a> {
         loop {
             // Take current char
             match self.curr.unwrap_or(' ') {
-                c @ 'a' ... 'z' |
-                c @ 'A' ... 'Z' |
-                c @ '0' ... '9' |
-                c @ '_' => {
+                c @ 'a'...'z' | c @ 'A'...'Z' | c @ '0'...'9' | c @ '_' => {
                     // Push letter into return string
                     s.push(c);
-                },
+                }
                 // If no letter, then stop loop
-                _ => break
+                _ => break,
             }
             // Next char
             self.bump();
@@ -92,11 +86,10 @@ impl<'a> Lexer<'a> {
         let dot = false;
         loop {
             match self.curr.unwrap_or(' ') {
-                c @ '0' ... '9' |
-                c @ '.' => {
+                c @ '0'...'9' | c @ '.' => {
                     s.push(c);
                 }
-                _ => break
+                _ => break,
             }
             self.bump();
         }
@@ -109,17 +102,13 @@ impl<'a> Lexer<'a> {
         loop {
             if self.curr.is_some() {
                 match self.curr.unwrap_or(' ') {
-                    c @ '\'' |
-                    c @ '"' => {
-                        break
-                    }
+                    c @ '\'' | c @ '"' => break,
                     c @ _ => {
                         s.push(c);
                     }
-
                 }
             } else {
-                return Err(LexError::UnclosedQuotationmark)
+                return Err(LexError::UnclosedQuotationmark);
             }
             self.bump();
         }
@@ -137,14 +126,11 @@ impl<'a> Lexer<'a> {
     /// Returns next token that is not a whitespace
     pub fn next_real(&mut self) -> Result<Option<TokenSpan>, LexError> {
         let tokspanop = try!(self.next());
-        let  wspace = match tokspanop {
-            Some(ref tokspan) => {
-                match tokspan.tok {
-                    Token::Whitespace => true,
-                    _ => false
-                }
-
-            }
+        let wspace = match tokspanop {
+            Some(ref tokspan) => match tokspan.tok {
+                Token::Whitespace => true,
+                _ => false,
+            },
             _ => false,
         };
 
@@ -154,23 +140,20 @@ impl<'a> Lexer<'a> {
             Ok(tokspanop)
         }
     }
-
 }
 
 /// Checks for whitespace/line break/tab
 fn is_whitespace(c: char) -> bool {
     match c {
         ' ' | '\n' | '\t' => true,
-        _ => false
+        _ => false,
     }
 }
 
 impl<'a> Lexer<'a> {
-
     //type Item = TokenSpan;
 
     fn next(&mut self) -> Result<Option<TokenSpan>, LexError> {
-
         // For two char ops (e.g. >=), we need to check the next char
         // if we are at the end of the string, we end
         let nexchar = self.next.unwrap_or('\x00');
@@ -181,20 +164,19 @@ impl<'a> Lexer<'a> {
         // Getting current char, else return None
         let curr = match self.curr {
             None => return Ok(None),
-            Some(c) => c
+            Some(c) => c,
         };
 
         // Matching current char to respective token
         let token = match curr {
-
             // Words
-            'a' ... 'z' | 'A' ... 'Z' => {
+            'a'...'z' | 'A'...'Z' => {
                 let w = self.scan_words();
                 Token::Word(w)
-            },
+            }
 
             // Lit Num
-            '0' ... '9' => {
+            '0'...'9' => {
                 let n = self.scan_nums();
                 if let Ok(i) = n.parse::<i64>() {
                     Token::Literal(Lit::Int(i))
@@ -205,25 +187,25 @@ impl<'a> Lexer<'a> {
                         Token::Unknown
                     }
                 }
-            },
+            }
 
             // Semicolon
             ';' => {
                 self.bump();
                 Token::Semi
-            },
+            }
 
             // Dots
             '.' => {
                 self.bump();
                 Token::Dot
-            },
+            }
 
             // Commas
             ',' => {
                 self.bump();
                 Token::Comma
-            },
+            }
 
             // //bang
             // '!' => {
@@ -241,67 +223,67 @@ impl<'a> Lexer<'a> {
             '(' => {
                 self.bump();
                 Token::ParenOp
-            },
+            }
 
             // ParenCl
             ')' => {
                 self.bump();
                 Token::ParenCl
-            },
+            }
 
             // Literals
             '\'' | '"' => {
                 let l = try!(self.scan_lit());
                 Token::Literal(Lit::String(l))
-            },
+            }
 
             // Equ
             '=' => {
                 self.bump();
                 Token::Equ
-            },
+            }
 
             // GEThan >=
             '>' if nexchar == '=' => {
                 self.dbump(); // because two chars!
                 Token::GEThan
-            },
+            }
 
             // SEThan <=
             '<' if nexchar == '=' => {
                 self.dbump();
                 Token::SEThan
-            },
+            }
 
             // GThan >
             '>' => {
                 self.bump();
                 Token::GThan
-            },
+            }
 
             // NEqu <>
             '<' if nexchar == '>' => {
                 self.dbump();
                 Token::NEqu
-            },
+            }
 
             // SThan <
             '<' => {
                 self.bump();
                 Token::SThan
-            },
+            }
 
             // Add
             '+' => {
                 self.bump();
                 Token::Add
-            },
+            }
 
             // Sub
             '-' => {
                 self.bump();
                 Token::Sub
-            },
+            }
 
             // Div
             '/' => {
@@ -319,20 +301,19 @@ impl<'a> Lexer<'a> {
             '*' => {
                 self.bump();
                 Token::Star
-            },
+            }
 
             // Whitespaces
             c if is_whitespace(c) => {
                 self.skip_whitespace();
                 Token::Whitespace
-            },
+            }
 
             // Default: everything else
             _ => {
                 self.bump();
                 Token::Unknown
             }
-
         };
 
         // Return an Option
@@ -340,13 +321,13 @@ impl<'a> Lexer<'a> {
             tok: token,
             span: Span {
                 lo: self.span_start.unwrap(),
-                hi: self.curr_pos.unwrap()
-            }
+                hi: self.curr_pos.unwrap(),
+            },
         }))
     }
 }
 
 #[derive(PartialEq, Debug)]
 pub enum LexError {
-    UnclosedQuotationmark
+    UnclosedQuotationmark,
 }

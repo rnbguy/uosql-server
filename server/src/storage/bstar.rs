@@ -1,15 +1,13 @@
-
-use std::io::*;
-use std::fs::File;
-use std::fs;
-use byteorder::{BigEndian, WriteBytesExt, ReadBytesExt};
-use std::fs::OpenOptions;
+use byteorder::{BigEndian, ReadBytesExt, WriteBytesExt};
 use std::cmp::Ord;
 use std::cmp::Ordering;
-use std::marker::PhantomData;
 use std::fmt::Debug;
+use std::fs;
+use std::fs::File;
+use std::fs::OpenOptions;
+use std::io::*;
 use std::iter::Iterator;
-
+use std::marker::PhantomData;
 
 pub trait KnownSize {
     /// returns the fixed size of all objects ever created
@@ -43,7 +41,7 @@ pub enum MetaAddress {
 #[derive(PartialEq)]
 pub enum Side {
     Right,
-    Left
+    Left,
 }
 #[derive(Debug)]
 pub struct Bstar<T: Debug + PartialOrd + KnownSize> {
@@ -67,12 +65,11 @@ impl<T: KnownSize + PartialOrd + Clone + Debug> Bstar<T> {
     }
 
     /// Loads a Bstar object from the specified name/path
-    pub fn load(name: &str) -> Result<Bstar<T>>{
-
+    pub fn load(name: &str) -> Result<Bstar<T>> {
         let mut _file = OpenOptions::new()
-        .read(true)
-        .write(true)
-        .open(format!("{}.{}", name, "bsdat"));
+            .read(true)
+            .write(true)
+            .open(format!("{}.{}", name, "bsdat"));
 
         let mut dat = match _file {
             Ok(f) => f,
@@ -80,9 +77,9 @@ impl<T: KnownSize + PartialOrd + Clone + Debug> Bstar<T> {
         };
 
         _file = OpenOptions::new()
-        .read(true)
-        .write(true)
-        .open(format!("{}.{}", name, "bsmet"));
+            .read(true)
+            .write(true)
+            .open(format!("{}.{}", name, "bsmet"));
 
         let mut meta = match _file {
             Ok(f) => f,
@@ -115,12 +112,9 @@ impl<T: KnownSize + PartialOrd + Clone + Debug> Bstar<T> {
             target: target,
             meta: meta,
             dat: dat,
-            type_save: PhantomData
-        }
-        )
-
+            type_save: PhantomData,
+        })
     }
-
 
     /// Creates a new permanent Bstar object.
     /// target is the name of the table holding the data records,
@@ -128,10 +122,10 @@ impl<T: KnownSize + PartialOrd + Clone + Debug> Bstar<T> {
     pub fn create(name: &str, target: &str, order: u64) -> Result<Bstar<T>> {
         let allowduplicates = false;
         let mut _file = OpenOptions::new()
-        .read(true)
-        .write(true)
-        .create(true)
-        .open(format!("{}.{}", name, "bsdat"));
+            .read(true)
+            .write(true)
+            .create(true)
+            .open(format!("{}.{}", name, "bsdat"));
 
         let mut dat = match _file {
             Ok(f) => f,
@@ -139,10 +133,10 @@ impl<T: KnownSize + PartialOrd + Clone + Debug> Bstar<T> {
         };
 
         _file = OpenOptions::new()
-        .read(true)
-        .write(true)
-        .create(true)
-        .open(format!("{}.{}", name, "bsmet"));
+            .read(true)
+            .write(true)
+            .create(true)
+            .open(format!("{}.{}", name, "bsmet"));
 
         let mut meta = match _file {
             Ok(f) => f,
@@ -177,14 +171,13 @@ impl<T: KnownSize + PartialOrd + Clone + Debug> Bstar<T> {
             order: order,
             elementcount: 0,
             freeaddr: 0,
-            eof:0,
+            eof: 0,
             allowduplicates: allowduplicates,
             target: target.into(),
             meta: meta,
             dat: dat,
             type_save: PhantomData,
-        }
-        )
+        })
     }
 
     /// resets the tree to 0 elements
@@ -201,21 +194,21 @@ impl<T: KnownSize + PartialOrd + Clone + Debug> Bstar<T> {
     }
 
     /// prints a debug version of the tree
-    pub fn debug_print(& mut self) -> Result<()>{
+    pub fn debug_print(&mut self) -> Result<()> {
         let root = self.root;
-        Ok(try!(self.debug_print_rec(root,"")))
+        Ok(try!(self.debug_print_rec(root, "")))
     }
 
     fn debug_print_rec(&mut self, addr: u64, delim: &str) -> Result<()> {
-        let node = try!(Bnode::<T>::read(& mut self.dat, Some(addr)));
-        print!("{}{}:  ",delim, addr);
+        let node = try!(Bnode::<T>::read(&mut self.dat, Some(addr)));
+        print!("{}{}:  ", delim, addr);
         for key in &node.node_list.list {
-            print!("{:?} => {:?} ;  ",key.key, key.addr);
+            print!("{:?} => {:?} ;  ", key.key, key.addr);
         }
         println!("");
-        if !node.is_leaf  {
+        if !node.is_leaf {
             for key in node.node_list.list {
-                try!(self.debug_print_rec(key.addr,&format!("{}{}",delim,"|----")));
+                try!(self.debug_print_rec(key.addr, &format!("{}{}", delim, "|----")));
             }
         }
         Ok(())
@@ -223,7 +216,7 @@ impl<T: KnownSize + PartialOrd + Clone + Debug> Bstar<T> {
 
     /// searches for key in the tree and returns the KeyAddr object or None
     pub fn lookup_keyaddr(&mut self, key: T) -> Result<Option<KeyAddr<T>>> {
-        let lookup = try!(self.lookup_internal(& KeyAddr::new(key.clone(),0)));
+        let lookup = try!(self.lookup_internal(&KeyAddr::new(key.clone(), 0)));
         if lookup.found {
             Ok(Some(KeyAddr::new(key, lookup.target.unwrap())))
         } else {
@@ -236,7 +229,6 @@ impl<T: KnownSize + PartialOrd + Clone + Debug> Bstar<T> {
         let lookup = try!(self.lookup_internal(&key));
 
         if lookup.bnode.is_some() {
-
             if lookup.found && !self.allowduplicates {
                 // Key already exists
                 Ok(false)
@@ -251,13 +243,12 @@ impl<T: KnownSize + PartialOrd + Clone + Debug> Bstar<T> {
                     try!(self.inc_elementcount());
                     try!(self.delegate_overflow_father(&mut originalnode, lookup.addr));
                     Ok(true)
-
                 } else {
                     // Normal Insert
                     if originalnode.node_list.insert(key) == 0 {
                         // key for reaching this node changed!
                         let oldkey = originalnode.node_list.get_by_index(1).unwrap().key.clone();
-                        try!(self.delegate_reaching_key(&mut originalnode, oldkey ));
+                        try!(self.delegate_reaching_key(&mut originalnode, oldkey));
                     }
 
                     try!(originalnode.write(&mut self.dat, Some(lookup.addr)));
@@ -267,9 +258,6 @@ impl<T: KnownSize + PartialOrd + Clone + Debug> Bstar<T> {
                     Ok(true)
                 }
             }
-
-
-
         } else {
             // if tree is empty create new root node
             try!(self.dat.seek(SeekFrom::Start(lookup.addr)));
@@ -283,12 +271,10 @@ impl<T: KnownSize + PartialOrd + Clone + Debug> Bstar<T> {
         }
     }
 
-
-    fn delegate_overflow_father(&mut self, node: &mut Bnode<T>, addr: u64) -> Result<Bnode<T>>{
+    fn delegate_overflow_father(&mut self, node: &mut Bnode<T>, addr: u64) -> Result<Bnode<T>> {
         if node.node_list.elementcount <= self.order * 2 {
             try!(node.write(&mut self.dat, Some(addr)));
             Bnode::<T>::read(&mut self.dat, Some(addr))
-
         } else {
             let fatheraddr = node.father;
             let index = node.node_list.elementcount as usize / 2;
@@ -297,14 +283,15 @@ impl<T: KnownSize + PartialOrd + Clone + Debug> Bstar<T> {
             // the context
             // leftbrother will be the original node, rightbrother is the old original nodes right
             // brother
-            let mut rightson = Bnode::create(rightlist,
-                            fatheraddr,
-                            Some(addr),
-                            node.rightbrother,
-                            node.is_leaf,
-                            false,
-                            self.order);
-
+            let mut rightson = Bnode::create(
+                rightlist,
+                fatheraddr,
+                Some(addr),
+                node.rightbrother,
+                node.is_leaf,
+                false,
+                self.order,
+            );
 
             // For the father: create left and right son keyaddr that need to be inserted.
             let leftkey = node.node_list.get_by_index(0).unwrap().key.clone();
@@ -314,8 +301,10 @@ impl<T: KnownSize + PartialOrd + Clone + Debug> Bstar<T> {
 
             // update the original nodes right brothers left brother pointer
             if node.rightbrother.is_some() {
-                let mut tmp = try!(Bnode::<T>::read(&mut self.dat,
-                                    Some(node.rightbrother.unwrap())));
+                let mut tmp = try!(Bnode::<T>::read(
+                    &mut self.dat,
+                    Some(node.rightbrother.unwrap())
+                ));
                 tmp.leftbrother = Some(rightaddr);
                 try!(tmp.write(&mut self.dat, node.rightbrother));
             }
@@ -323,8 +312,7 @@ impl<T: KnownSize + PartialOrd + Clone + Debug> Bstar<T> {
             // the original nodes right brother will be the new created rightson
             node.rightbrother = Some(rightaddr);
 
-
-            if !rightson.is_leaf  {
+            if !rightson.is_leaf {
                 for key in &rightson.node_list.list {
                     try!(self.dat.seek(SeekFrom::Start(key.addr)));
                     self.dat.write_u64::<BigEndian>(rightaddr);
@@ -333,12 +321,10 @@ impl<T: KnownSize + PartialOrd + Clone + Debug> Bstar<T> {
 
             let leftaddr = addr;
             if node.is_root {
-
                 // original node was the root node
                 let newrootaddr = try!(self.use_free_addr());
                 let leftaddr = addr;
                 let leftkeyaddr = KeyAddr::new(leftkey, leftaddr);
-
 
                 // left son: father as rightson.
                 // since the nodelist of original was changed already, original is the new left son
@@ -349,14 +335,8 @@ impl<T: KnownSize + PartialOrd + Clone + Debug> Bstar<T> {
                 let mut node_list = SortedList::<KeyAddr<T>>::new();
                 node_list.insert(leftkeyaddr);
                 node_list.insert(rightkeyaddr);
-                let mut newroot = Bnode::create(node_list,
-                                    self.root,
-                                    None,
-                                    None,
-                                    false,
-                                    true,
-                                    self.order);
-
+                let mut newroot =
+                    Bnode::create(node_list, self.root, None, None, false, true, self.order);
 
                 // update the new root position
                 self.update_root(newrootaddr);
@@ -371,7 +351,6 @@ impl<T: KnownSize + PartialOrd + Clone + Debug> Bstar<T> {
                 try!(rightson.write(&mut self.dat, Some(rightaddr)));
                 // increase elementcount of tree
                 Ok(newroot)
-
             } else {
                 // inner node or leaf:
                 let mut father = try!(Bnode::<T>::read(&mut self.dat, Some(fatheraddr)));
@@ -389,21 +368,22 @@ impl<T: KnownSize + PartialOrd + Clone + Debug> Bstar<T> {
 
                 // deligate possible problem to father node
                 self.delegate_overflow_father(&mut father, fatheraddr)
-
             }
         }
     }
 
-    fn delegate_reaching_key(&mut self, node: &mut Bnode<T>, oldkey: T) -> Result<()>{
+    fn delegate_reaching_key(&mut self, node: &mut Bnode<T>, oldkey: T) -> Result<()> {
         if !node.is_root {
             let keyofinterest = node.node_list.get_by_index(0).unwrap().key.clone();
             //let oldkeyofinterest = node.node_list.get_by_index(1).unwrap().key.clone();
             let mut father = try!(Bnode::<T>::read(&mut self.dat, Some(node.father)));
             //let newoldkey = father.node_list.get_by_index(1).unwrap().key.clone();
-            let sonaddress = father.node_list.delete_by_key(
-                            &KeyAddr::new(oldkey.clone(), 0)
-                            ).unwrap().addr;
-            let keyaddr = KeyAddr::<T>::new(keyofinterest , sonaddress);
+            let sonaddress = father
+                .node_list
+                .delete_by_key(&KeyAddr::new(oldkey.clone(), 0))
+                .unwrap()
+                .addr;
+            let keyaddr = KeyAddr::<T>::new(keyofinterest, sonaddress);
             if father.node_list.insert(keyaddr) == 0 {
                 try!(father.write(&mut self.dat, Some(node.father)));
                 self.delegate_reaching_key(&mut father, oldkey)
@@ -411,7 +391,6 @@ impl<T: KnownSize + PartialOrd + Clone + Debug> Bstar<T> {
                 try!(father.write(&mut self.dat, Some(node.father)));
                 Ok(())
             }
-
         } else {
             Ok(())
         }
@@ -422,15 +401,16 @@ impl<T: KnownSize + PartialOrd + Clone + Debug> Bstar<T> {
         if self.elementcount == 0 {
             Ok(None)
         } else {
-            let lookup  = try!(self.lookup_internal(&KeyAddr::<T>::new(key.clone(), 0 )));
+            let lookup = try!(self.lookup_internal(&KeyAddr::<T>::new(key.clone(), 0)));
             if lookup.found {
-                try!(self.delegate_underflow_node(&mut lookup.bnode.unwrap(),
-                                                 lookup.index.unwrap(),
-                                                 lookup.addr));
+                try!(self.delegate_underflow_node(
+                    &mut lookup.bnode.unwrap(),
+                    lookup.index.unwrap(),
+                    lookup.addr
+                ));
 
                 try!(self.dec_elementcount());
                 Ok(Some(KeyAddr::<T>::new(key, lookup.target.unwrap())))
-
             } else {
                 Ok(None)
             }
@@ -440,12 +420,12 @@ impl<T: KnownSize + PartialOrd + Clone + Debug> Bstar<T> {
     // node: Node found.
     // keyindex: the index of the key to be deleted
     // nodeaddr: the address of the node
-    fn delegate_underflow_node(&mut self,
-                    node: &mut Bnode<T>,
-                    keyindex: u64,
-                    nodeaddr: u64)
-                    -> Result<()>
-        {
+    fn delegate_underflow_node(
+        &mut self,
+        node: &mut Bnode<T>,
+        keyindex: u64,
+        nodeaddr: u64,
+    ) -> Result<()> {
         if node.node_list.elementcount > self.order {
             // normal delete
             let res = node.node_list.delete_by_index(keyindex as usize);
@@ -458,7 +438,7 @@ impl<T: KnownSize + PartialOrd + Clone + Debug> Bstar<T> {
                 // delete from root
                 if node.node_list.elementcount <= 2 {
                     // delete old root if root elements is 2 or less
-                    if node.is_leaf  {
+                    if node.is_leaf {
                         // root is the only node
                         // TODO: you know the index, use it to make Deletion efficient!!!
                         if node.node_list.elementcount == 2 {
@@ -509,16 +489,22 @@ impl<T: KnownSize + PartialOrd + Clone + Debug> Bstar<T> {
                 // left brother
                 let leftbaddr = match indexonfather {
                     0 => None,
-                    _ => Some(father.node_list.get_by_index(indexonfather - 1).unwrap().addr),
+                    _ => Some(
+                        father
+                            .node_list
+                            .get_by_index(indexonfather - 1)
+                            .unwrap()
+                            .addr,
+                    ),
                 };
                 // determine which son to choose
                 let mut peernode = {
                     if rightbaddr != None && leftbaddr != None {
                         // compare size ofbrother nodes
-                        let rightbnode = try!(Bnode::<T>::read(&mut self.dat,
-                                                                Some(rightbaddr.unwrap())));
-                        let leftbnode = try!(Bnode::<T>::read(&mut self.dat,
-                                                                Some(leftbaddr.unwrap())));
+                        let rightbnode =
+                            try!(Bnode::<T>::read(&mut self.dat, Some(rightbaddr.unwrap())));
+                        let leftbnode =
+                            try!(Bnode::<T>::read(&mut self.dat, Some(leftbaddr.unwrap())));
                         if rightbnode.node_list.elementcount > leftbnode.node_list.elementcount {
                             (rightbnode, Side::Right, rightbaddr.unwrap())
                         } else {
@@ -526,16 +512,19 @@ impl<T: KnownSize + PartialOrd + Clone + Debug> Bstar<T> {
                         }
                     } else if rightbaddr == None {
                         // return left brother
-                        (try!(Bnode::<T>::read(&mut self.dat, Some(leftbaddr.unwrap()))),
-                                                                    Side::Left,
-                                                                    leftbaddr.unwrap())
+                        (
+                            try!(Bnode::<T>::read(&mut self.dat, Some(leftbaddr.unwrap()))),
+                            Side::Left,
+                            leftbaddr.unwrap(),
+                        )
                     } else {
                         // return right brother
-                        (try!(Bnode::<T>::read(&mut self.dat, Some(rightbaddr.unwrap()))),
-                                                                    Side::Right,
-                                                                    rightbaddr.unwrap())
+                        (
+                            try!(Bnode::<T>::read(&mut self.dat, Some(rightbaddr.unwrap()))),
+                            Side::Right,
+                            rightbaddr.unwrap(),
+                        )
                     }
-
                 };
 
                 let mut merged = false;
@@ -552,8 +541,10 @@ impl<T: KnownSize + PartialOrd + Clone + Debug> Bstar<T> {
 
                         // update left and rightbrother addresses
                         if node.rightbrother.is_some() {
-                            let mut tmp = try!(Bnode::<T>::read(&mut self.dat,
-                                                Some(node.rightbrother.unwrap())));
+                            let mut tmp = try!(Bnode::<T>::read(
+                                &mut self.dat,
+                                Some(node.rightbrother.unwrap())
+                            ));
                             tmp.leftbrother = node.leftbrother;
                             try!(tmp.write(&mut self.dat, node.rightbrother));
                         }
@@ -562,9 +553,11 @@ impl<T: KnownSize + PartialOrd + Clone + Debug> Bstar<T> {
                         // write peer to disk
                         try!(peernode.0.write(&mut self.dat, Some(peernode.2)));
                         // delete original nodes reaching key from father by recursion
-                        try!(self.delegate_underflow_node(&mut father,
-                                                            indexonfather as u64,
-                                                            node.father));
+                        try!(self.delegate_underflow_node(
+                            &mut father,
+                            indexonfather as u64,
+                            node.father
+                        ));
                     } else {
                         // peer on right side => append peer list to node list
                         for i in 0..(peernode.0.node_list.elementcount) {
@@ -578,8 +571,10 @@ impl<T: KnownSize + PartialOrd + Clone + Debug> Bstar<T> {
 
                         // update left and rightbrother addresses
                         if peernode.0.rightbrother.is_some() {
-                            let mut tmp = try!(Bnode::<T>::read(&mut self.dat,
-                                                Some(peernode.0.rightbrother.unwrap())));
+                            let mut tmp = try!(Bnode::<T>::read(
+                                &mut self.dat,
+                                Some(peernode.0.rightbrother.unwrap())
+                            ));
                             tmp.leftbrother = peernode.0.leftbrother;
                             try!(tmp.write(&mut self.dat, peernode.0.rightbrother));
                         }
@@ -588,12 +583,13 @@ impl<T: KnownSize + PartialOrd + Clone + Debug> Bstar<T> {
                         // write node to disk
                         try!(node.write(&mut self.dat, Some(nodeaddr)));
                         // delete right peer reaching key from father by recursion
-                        try!(self.delegate_underflow_node(&mut father,
-                                                            (indexonfather + 1) as u64,
-                                                            node.father));
+                        try!(self.delegate_underflow_node(
+                            &mut father,
+                            (indexonfather + 1) as u64,
+                            node.father
+                        ));
                     }
                     merged = true;
-
                 } else {
                     // distribute nodelists from both nodes equally
 
@@ -602,23 +598,28 @@ impl<T: KnownSize + PartialOrd + Clone + Debug> Bstar<T> {
 
                     if peernode.1 == Side::Left {
                         // peer is left node
-                        for i in 0..((peerlength - nodelength)/2) {
-                            let tmp = peernode.0.node_list
-                                            .delete_by_index((peerlength-i-1) as usize);
+                        for i in 0..((peerlength - nodelength) / 2) {
+                            let tmp = peernode
+                                .0
+                                .node_list
+                                .delete_by_index((peerlength - i - 1) as usize);
                             node.node_list.insert_at_index(0, tmp.unwrap());
                         }
-
 
                         father.node_list.get_by_index(indexonfather).unwrap().key =
                             node.node_list.get_by_index(0).unwrap().key.clone();
                     } else {
-                        for i in 0..((peerlength - nodelength)/2) {
+                        for i in 0..((peerlength - nodelength) / 2) {
                             let tmp = peernode.0.node_list.delete_by_index(0);
-                            node.node_list.insert_at_index(nodelength as usize, tmp.unwrap());
+                            node.node_list
+                                .insert_at_index(nodelength as usize, tmp.unwrap());
                             let mut nodelength = node.node_list.elementcount;
                         }
-                        father.node_list.get_by_index(indexonfather + 1).unwrap().key =
-                            peernode.0.node_list.get_by_index(0).unwrap().key.clone();
+                        father
+                            .node_list
+                            .get_by_index(indexonfather + 1)
+                            .unwrap()
+                            .key = peernode.0.node_list.get_by_index(0).unwrap().key.clone();
                     }
                 }
 
@@ -633,7 +634,6 @@ impl<T: KnownSize + PartialOrd + Clone + Debug> Bstar<T> {
         }
         Ok(())
     }
-
 
     fn inc_elementcount(&mut self) -> Result<()> {
         self.elementcount += 1;
@@ -662,14 +662,14 @@ impl<T: KnownSize + PartialOrd + Clone + Debug> Bstar<T> {
                 bnode: None,
                 addr: try!(self.use_free_addr()),
                 index: None,
-                target: None} )
-
+                target: None,
+            })
         } else {
             // tree is not empty
             let mut addr = self.root;
-            let mut node = try!(Bnode::<T>::read(& mut self.dat, Some(addr)));
+            let mut node = try!(Bnode::<T>::read(&mut self.dat, Some(addr)));
             if !self.allowduplicates {
-            let mut res = node.node_list.get_index_by_key(key);
+                let mut res = node.node_list.get_index_by_key(key);
                 // from the root starting search down to the leaf
                 while !node.is_leaf {
                     let mut index = res.1;
@@ -693,18 +693,21 @@ impl<T: KnownSize + PartialOrd + Clone + Debug> Bstar<T> {
                     found: found,
                     bnode: Some(node),
                     addr: addr,
-                    index: Some(res.1 as u64) ,
+                    index: Some(res.1 as u64),
                     target: target,
                 })
-
             } else {
                 self.internal_lookup_duplicates(&mut node, addr, key)
             }
         }
     }
 
-    fn internal_lookup_duplicates(& mut self, node: &mut Bnode<T>, addr: u64, key: &KeyAddr<T>)
-                                                        -> Result<InternalLookup<T>> {
+    fn internal_lookup_duplicates(
+        &mut self,
+        node: &mut Bnode<T>,
+        addr: u64,
+        key: &KeyAddr<T>,
+    ) -> Result<InternalLookup<T>> {
         let mut res = node.node_list.get_index_by_key(key);
         if !node.is_leaf {
             if res.0 && res.1 != 0 {
@@ -716,7 +719,7 @@ impl<T: KnownSize + PartialOrd + Clone + Debug> Bstar<T> {
                     let mut newnode = try!(Bnode::<T>::read(&mut self.dat, Some(newaddr)));
                     self.internal_lookup_duplicates(&mut newnode, newaddr, key)
                 } else {
-                   Ok(lookup)
+                    Ok(lookup)
                 }
             } else {
                 let mut index = res.1;
@@ -740,7 +743,7 @@ impl<T: KnownSize + PartialOrd + Clone + Debug> Bstar<T> {
                 found: found,
                 bnode: Some(resnode),
                 addr: addr,
-                index: Some(res.1 as u64) ,
+                index: Some(res.1 as u64),
                 target: target,
             })
         }
@@ -774,10 +777,10 @@ impl<T: KnownSize + PartialOrd + Clone + Debug> Bstar<T> {
     // the last free address.
     // Importend!!!!!!!!! THIS WILL MAKE THE NODE AT addr INVALID!!
     // ONLY USE AFTER DELETING THE NODE AT addr!!!!!!!!!!!
-    fn update_free_addr(&mut self, addr: u64) -> Result<()>{
+    fn update_free_addr(&mut self, addr: u64) -> Result<()> {
         if addr + Bnode::<T>::size(self.order) == self.eof {
             try!(self.dat.set_len(addr));
-            self.eof=addr;
+            self.eof = addr;
             try!(self.meta.seek(SeekFrom::Start(EoF)));
             try!(self.meta.write_u64::<BigEndian>(addr));
         } else {
@@ -797,18 +800,18 @@ impl<T: KnownSize + PartialOrd + Clone + Debug> Bstar<T> {
         Ok(())
     }
 
-
     /// returns an iterator for the elements of the tree
     pub fn iter(&mut self) -> Bterator<T> {
         let mut onode = Bnode::<T>::read(&mut self.dat, Some(self.root));
         let dummy = Bnode::<T>::create(
-                                    SortedList::<KeyAddr<T>>::new(),
-                                    0,
-                                    None,
-                                    None,
-                                    false,
-                                    false,
-                                    0);
+            SortedList::<KeyAddr<T>>::new(),
+            0,
+            None,
+            None,
+            false,
+            false,
+            0,
+        );
         if onode.is_ok() {
             let mut node = onode.unwrap();
             let mut addr = self.root;
@@ -819,40 +822,48 @@ impl<T: KnownSize + PartialOrd + Clone + Debug> Bstar<T> {
                 if onode.is_ok() {
                     node = onode.unwrap();
                 } else {
-                    return Bterator { dat: &mut self.dat,
-                                    addr: addr,
-                                    node: dummy,
-                                    direction: IterDirection::Forward }
+                    return Bterator {
+                        dat: &mut self.dat,
+                        addr: addr,
+                        node: dummy,
+                        direction: IterDirection::Forward,
+                    };
                 }
             }
-            Bterator { dat: &mut self.dat,
-                        addr: addr,
-                        node: node,
-                        direction: IterDirection::Forward }
+            Bterator {
+                dat: &mut self.dat,
+                addr: addr,
+                node: node,
+                direction: IterDirection::Forward,
+            }
         } else {
-            Bterator { dat: &mut self.dat,
-                        addr: 0,
-                        node: dummy,
-                        direction: IterDirection::Forward }
+            Bterator {
+                dat: &mut self.dat,
+                addr: 0,
+                node: dummy,
+                direction: IterDirection::Forward,
+            }
         }
     }
-
 
     /// returns a specific iterator moving in the specified direction
     /// if a key is given to the function with the Option to include or exclude it,
     /// the iterator will do so.
     /// It does not matter if the key is in the tree or not.
-    pub fn iter_options(&mut self, direction: IterDirection, key: Option<IterOption<T>> )
-                                                                                 -> Bterator<T>
-    {
+    pub fn iter_options(
+        &mut self,
+        direction: IterDirection,
+        key: Option<IterOption<T>>,
+    ) -> Bterator<T> {
         let dummy = Bnode::<T>::create(
-                    SortedList::<KeyAddr<T>>::new(),
-                    0,
-                    None,
-                    None,
-                    false,
-                    false,
-                    0);
+            SortedList::<KeyAddr<T>>::new(),
+            0,
+            None,
+            None,
+            false,
+            false,
+            0,
+        );
         if key.is_none() {
             if direction == IterDirection::Forward {
                 return self.iter();
@@ -870,111 +881,115 @@ impl<T: KnownSize + PartialOrd + Clone + Debug> Bstar<T> {
                         if onode.is_ok() {
                             node = onode.unwrap();
                         } else {
-                            return Bterator { dat: &mut self.dat,
-                                                addr: addr,
-                                                node: dummy,
-                                                direction: direction }
+                            return Bterator {
+                                dat: &mut self.dat,
+                                addr: addr,
+                                node: dummy,
+                                direction: direction,
+                            };
                         }
                         index = node.node_list.elementcount - 1;
                     }
-                    return Bterator { dat: &mut self.dat,
-                                        addr: addr,
-                                        node: node,
-                                        direction: direction }
+                    return Bterator {
+                        dat: &mut self.dat,
+                        addr: addr,
+                        node: node,
+                        direction: direction,
+                    };
                 } else {
-                    return Bterator { dat: &mut self.dat,
-                                        addr: 0,
-                                        node: dummy,
-                                        direction: direction }
+                    return Bterator {
+                        dat: &mut self.dat,
+                        addr: 0,
+                        node: dummy,
+                        direction: direction,
+                    };
                 }
             }
         } else {
             let iteroption = key.unwrap();
             let value = iteroption.unwrap();
-            let olookup = self.lookup_internal(&KeyAddr::<T>::new(value.clone(),0));
+            let olookup = self.lookup_internal(&KeyAddr::<T>::new(value.clone(), 0));
             if olookup.is_ok() {
                 let lookup = olookup.unwrap();
 
-                    let mut bnode = lookup.bnode.unwrap();
-                    let mut index = if direction == IterDirection::Forward {
-                        0
-                    } else {
-                        bnode.node_list.elementcount - 1
-                    };
+                let mut bnode = lookup.bnode.unwrap();
+                let mut index = if direction == IterDirection::Forward {
+                    0
+                } else {
+                    bnode.node_list.elementcount - 1
+                };
 
-                    let modifier = {
-                        if direction == IterDirection::Forward {
-                            if iteroption == IterOption::Excluding(value) {
-                                if lookup.index.unwrap() != 0 {
-                                    1
-                                } else {
-                                    if lookup.found {
-                                        1
-                                    } else {
-                                        0
-                                    }
-                                }
+                let modifier = {
+                    if direction == IterDirection::Forward {
+                        if iteroption == IterOption::Excluding(value) {
+                            if lookup.index.unwrap() != 0 {
+                                1
                             } else {
                                 if lookup.found {
+                                    1
+                                } else {
+                                    0
+                                }
+                            }
+                        } else {
+                            if lookup.found {
+                                0
+                            } else {
+                                if lookup.index.unwrap() == 0 {
                                     0
                                 } else {
-                                    if lookup.index.unwrap() == 0 {
-                                        0
-                                    } else {
-                                        1
-                                    }
+                                    1
                                 }
                             }
-                        } else {
-                            if iteroption == IterOption::Excluding(value) {
-                                if lookup.found {
+                        }
+                    } else {
+                        if iteroption == IterOption::Excluding(value) {
+                            if lookup.found {
+                                1
+                            } else {
+                                if lookup.index.unwrap() == 0 {
                                     1
                                 } else {
-                                    if lookup.index.unwrap() == 0 {
-                                        1
-                                    } else {
-                                        0
-                                    }
+                                    0
                                 }
-                            } else {
-                                0
                             }
-                        }
-                    };
-                    for i in if direction == IterDirection::Forward {
-                                0..lookup.index.unwrap() + modifier
-                            } else {
-                                0..(bnode.node_list.elementcount - 1 - lookup.index.unwrap()
-                                    + modifier)
-                            }
-                        {
-                        bnode.node_list.delete_by_index(index as usize);
-                        index = if direction == IterDirection::Forward {
-                            0
                         } else {
-                            if bnode.node_list.elementcount == 0 {
-                                break;
-                            }
-                            bnode.node_list.elementcount - 1
+                            0
                         }
                     }
-                    Bterator { dat: &mut self.dat,
-                                addr: lookup.addr,
-                                node: bnode,
-                                direction: direction }
-
+                };
+                for i in if direction == IterDirection::Forward {
+                    0..lookup.index.unwrap() + modifier
+                } else {
+                    0..(bnode.node_list.elementcount - 1 - lookup.index.unwrap() + modifier)
+                } {
+                    bnode.node_list.delete_by_index(index as usize);
+                    index = if direction == IterDirection::Forward {
+                        0
+                    } else {
+                        if bnode.node_list.elementcount == 0 {
+                            break;
+                        }
+                        bnode.node_list.elementcount - 1
+                    }
+                }
+                Bterator {
+                    dat: &mut self.dat,
+                    addr: lookup.addr,
+                    node: bnode,
+                    direction: direction,
+                }
             } else {
-                Bterator { dat: &mut self.dat,
-                            addr: 0,
-                            node: dummy,
-                            direction: IterDirection::Forward }
+                Bterator {
+                    dat: &mut self.dat,
+                    addr: 0,
+                    node: dummy,
+                    direction: IterDirection::Forward,
+                }
             }
         }
-
     }
-
 }
-
 
 #[derive(Debug)]
 struct InternalLookup<T: PartialOrd + KnownSize + Debug> {
@@ -988,15 +1003,14 @@ struct InternalLookup<T: PartialOrd + KnownSize + Debug> {
     // if tree is empty, index is None
     index: Option<u64>,
     // the address targeting the datarecord in the table file
-    target: Option<u64>
+    target: Option<u64>,
 }
-
 
 const BnodeElementCountOffset: u64 = 26;
 const BnodeIsRootOffset: u64 = 25;
 const BnodeLeftBrotherOffset: u64 = 8;
 const BnodeRightBrotherOffset: u64 = 16;
-#[derive(Debug,RustcDecodable, RustcEncodable)]
+#[derive(Debug, RustcDecodable, RustcEncodable)]
 pub struct Bnode<T: PartialOrd + KnownSize + Debug> {
     pub node_list: SortedList<KeyAddr<T>>,
     pub father: u64,
@@ -1006,24 +1020,21 @@ pub struct Bnode<T: PartialOrd + KnownSize + Debug> {
     pub is_leaf: bool,
     //0 = no root, else root
     pub is_root: bool,
-    order: u64
+    order: u64,
 }
 
 impl<T: PartialOrd + KnownSize + Debug> Bnode<T> {
-
     /// creates a new Bnode Object
     /// all u64 fields are addresses to other nodes
     pub fn create(
-                node_list: SortedList<KeyAddr<T>>,
-                father: u64,
-                leftbrother: Option<u64>,
-                rightbrother: Option<u64>,
-                is_leaf: bool,
-                is_root: bool,
-                order: u64)
-                -> Bnode<T>
-        {
-
+        node_list: SortedList<KeyAddr<T>>,
+        father: u64,
+        leftbrother: Option<u64>,
+        rightbrother: Option<u64>,
+        is_leaf: bool,
+        is_root: bool,
+        order: u64,
+    ) -> Bnode<T> {
         Bnode {
             node_list: node_list,
             father: father,
@@ -1031,7 +1042,7 @@ impl<T: PartialOrd + KnownSize + Debug> Bnode<T> {
             rightbrother: rightbrother,
             is_leaf: is_leaf,
             is_root: is_root,
-            order: order
+            order: order,
         }
     }
 
@@ -1040,17 +1051,17 @@ impl<T: PartialOrd + KnownSize + Debug> Bnode<T> {
         try!(seek_maybe(file, addr));
         let father = try!(file.read_u64::<BigEndian>());
         let leftbrother = if try!(file.read_u8()) == 1 {
-                Some(try!(file.read_u64::<BigEndian>()))
-            } else {
-                try!(file.read_u64::<BigEndian>());
-                None
-            };
+            Some(try!(file.read_u64::<BigEndian>()))
+        } else {
+            try!(file.read_u64::<BigEndian>());
+            None
+        };
         let rightbrother = if try!(file.read_u8()) == 1 {
-                Some(try!(file.read_u64::<BigEndian>()))
-            } else {
-                try!(file.read_u64::<BigEndian>());
-                None
-            };
+            Some(try!(file.read_u64::<BigEndian>()))
+        } else {
+            try!(file.read_u64::<BigEndian>());
+            None
+        };
 
         let is_leaf = if try!(file.read_u8()) == 1 {
             true
@@ -1061,12 +1072,12 @@ impl<T: PartialOrd + KnownSize + Debug> Bnode<T> {
             true
         } else {
             false
-        };;
+        };
         let elementcount = try!(file.read_u64::<BigEndian>());
         let order = try!(file.read_u64::<BigEndian>());
         let mut list = SortedList::<KeyAddr<T>>::with_capacity((order * 2) as usize);
         for i in 0..elementcount {
-            let keyaddr = try!(KeyAddr::<T>::read(file, None ));
+            let keyaddr = try!(KeyAddr::<T>::read(file, None));
             list.insert(keyaddr);
         }
 
@@ -1077,9 +1088,8 @@ impl<T: PartialOrd + KnownSize + Debug> Bnode<T> {
             rightbrother: rightbrother,
             is_leaf: is_leaf,
             is_root: is_root,
-            order: order
-            }
-        )
+            order: order,
+        })
     }
 
     /// writes a Bnode from disc at the specefied addr in the specified file
@@ -1118,12 +1128,11 @@ impl<T: PartialOrd + KnownSize + Debug> Bnode<T> {
             match self.node_list.get_by_index(i as usize) {
                 Some(keyaddr) => {
                     try!(keyaddr.write(file, None));
-                },
+                }
                 None => (),
             }
         }
         Ok(())
-
     }
 
     /// returns the size of the Bnode calculated using the order of the hosting B* tree
@@ -1132,24 +1141,27 @@ impl<T: PartialOrd + KnownSize + Debug> Bnode<T> {
     }
 }
 
-
-#[derive(Debug,RustcDecodable, RustcEncodable)]
+#[derive(Debug, RustcDecodable, RustcEncodable)]
 pub struct SortedList<T: PartialOrd + Debug> {
     pub list: Vec<T>,
     pub elementcount: u64,
-
 }
 
 impl<T: PartialOrd + Debug> SortedList<T> {
-
     /// generates a new SortedList
     pub fn new() -> SortedList<T> {
-        SortedList { list: Vec::new(), elementcount: 0}
+        SortedList {
+            list: Vec::new(),
+            elementcount: 0,
+        }
     }
 
     /// allocates some memory for the new sorted list
     pub fn with_capacity(size: usize) -> SortedList<T> {
-        SortedList { list: Vec::with_capacity(size), elementcount: 0 }
+        SortedList {
+            list: Vec::with_capacity(size),
+            elementcount: 0,
+        }
     }
 
     /// returns true when the list is empty
@@ -1159,7 +1171,7 @@ impl<T: PartialOrd + Debug> SortedList<T> {
 
     /// inserts a given key at a given index
     pub fn insert_at_index(&mut self, index: usize, key: T) {
-        self.list.insert(index,key);
+        self.list.insert(index, key);
         self.elementcount += 1;
     }
 
@@ -1167,17 +1179,17 @@ impl<T: PartialOrd + Debug> SortedList<T> {
     pub fn insert(&mut self, value: T) -> u64 {
         if self.empty() {
             self.list.push(value);
-            self.elementcount +=1;
+            self.elementcount += 1;
             0
         } else {
             let res = self.get_index_by_key_rec(&value, 0, (self.elementcount - 1) as usize);
             if self.list[res.1].partial_cmp(&value) == Some(Ordering::Less) {
                 self.list.insert(res.1 + 1, value);
-                self.elementcount +=1;
+                self.elementcount += 1;
                 (res.1 + 1) as u64
             } else {
                 self.list.insert(res.1, value);
-                self.elementcount +=1;
+                self.elementcount += 1;
                 res.1 as u64
             }
         }
@@ -1189,17 +1201,16 @@ impl<T: PartialOrd + Debug> SortedList<T> {
     /// (index, elementcount)
     ///
     /// panics if index is out of bounds
-    pub fn split_by_index(&mut self, index: usize) -> SortedList<T>{
+    pub fn split_by_index(&mut self, index: usize) -> SortedList<T> {
         let mut second = SortedList::<T>::new();
         let tmp = self.elementcount;
         for i in 1..(tmp - (index as u64)) {
-            second.list.insert(0, self.list.remove((tmp-i) as usize));
-            second.elementcount+=1;
-            self.elementcount-=1;
+            second.list.insert(0, self.list.remove((tmp - i) as usize));
+            second.elementcount += 1;
+            self.elementcount -= 1;
         }
 
         second
-
     }
 
     /// behaves as split_by_index but splits the list at the key position
@@ -1211,22 +1222,21 @@ impl<T: PartialOrd + Debug> SortedList<T> {
     /// deletes and returns a given key
     pub fn delete_by_key(&mut self, value: &T) -> Option<T> {
         if self.empty() {
-            return None
+            return None;
         };
         let res = self.get_index_by_key_rec(value, 0, (self.elementcount - 1) as usize);
         if !res.0 {
             None
         } else {
-            self.elementcount -=1;
+            self.elementcount -= 1;
             Some(self.list.remove(res.1))
-
         }
     }
 
     /// deletes a key at indexposition
     pub fn delete_by_index(&mut self, index: usize) -> Option<T> {
-        if  index >= 0 && index <= ( self.elementcount -1 ) as usize {
-            self.elementcount-=1;
+        if index >= 0 && index <= (self.elementcount - 1) as usize {
+            self.elementcount -= 1;
             Some(self.list.remove(index))
         } else {
             None
@@ -1235,7 +1245,7 @@ impl<T: PartialOrd + Debug> SortedList<T> {
 
     /// returns a mutable reference to a key found at index
     pub fn get_by_index(&mut self, index: usize) -> Option<&mut T> {
-        if index >= 0 && index <= ( self.elementcount - 1 ) as usize {
+        if index >= 0 && index <= (self.elementcount - 1) as usize {
             Some(&mut self.list[index])
         } else {
             None
@@ -1244,7 +1254,7 @@ impl<T: PartialOrd + Debug> SortedList<T> {
 
     /// returns a mutable reference to a key found by searching for it
     pub fn get_by_key(&mut self, tofind: &T) -> Option<&mut T> {
-        let res = self.get_index_by_key_rec(tofind, 0 , (self.elementcount - 1) as usize);
+        let res = self.get_index_by_key_rec(tofind, 0, (self.elementcount - 1) as usize);
         if res.0 {
             Some(&mut self.list[res.1])
         } else {
@@ -1261,14 +1271,13 @@ impl<T: PartialOrd + Debug> SortedList<T> {
     }
 
     fn get_index_by_key_rec(&self, tofind: &T, lo: usize, hi: usize) -> (bool, usize) {
-
         if hi == lo {
             if self.list[hi].partial_cmp(tofind) == Some(Ordering::Equal) {
-                return (true, hi)
+                return (true, hi);
             }
-            return (false, hi)
+            return (false, hi);
         } else if hi < lo {
-            return (false, ( hi + lo ) /2)
+            return (false, (hi + lo) / 2);
         }
 
         let mid = (lo + hi + 1) / 2;
@@ -1277,17 +1286,12 @@ impl<T: PartialOrd + Debug> SortedList<T> {
             Some(Ordering::Equal) => (true, mid),
             Some(Ordering::Greater) => self.get_index_by_key_rec(tofind, lo, mid - 1),
             Some(Ordering::Less) => self.get_index_by_key_rec(tofind, mid + 1, hi),
-            None => (false, mid)
+            None => (false, mid),
         }
     }
-
-
-
 }
 
-
-
-#[derive(Debug,RustcDecodable, RustcEncodable, Clone)]
+#[derive(Debug, RustcDecodable, RustcEncodable, Clone)]
 pub struct KeyAddr<T: PartialOrd + KnownSize + Debug> {
     pub key: T,
     pub addr: u64,
@@ -1296,12 +1300,15 @@ pub struct KeyAddr<T: PartialOrd + KnownSize + Debug> {
 impl<T: PartialOrd + KnownSize + Debug> KeyAddr<T> {
     /// returns a new KeyAddr object
     pub fn new(key: T, addr: u64) -> KeyAddr<T> {
-        KeyAddr { key: key, addr: addr}
+        KeyAddr {
+            key: key,
+            addr: addr,
+        }
     }
 }
 
 impl<T: PartialOrd + KnownSize + Debug> PartialOrd for KeyAddr<T> {
-    fn partial_cmp(&self, other:&Self) -> Option<Ordering> {
+    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
         self.key.partial_cmp(&other.key)
     }
 }
@@ -1311,7 +1318,6 @@ impl<T: PartialOrd + KnownSize + Debug> PartialEq for KeyAddr<T> {
         self.key.eq(&other.key)
     }
 }
-
 
 impl<T: KnownSize + PartialOrd + Debug> KnownSize for KeyAddr<T> {
     /// calculates the size of KeyValue Objects
@@ -1324,7 +1330,7 @@ impl<T: KnownSize + PartialOrd + Debug> KnownSize for KeyAddr<T> {
     fn read(file: &mut File, addr: Option<u64>) -> Result<KeyAddr<T>> {
         let key = try!(T::read(file, addr));
         let tmp = try!(u64::read(file, None));
-        Ok(KeyAddr::new(key,tmp))
+        Ok(KeyAddr::new(key, tmp))
     }
 
     /// writes a KeyValue ojbect to disc at the specified file and addr
@@ -1339,10 +1345,7 @@ impl<T: KnownSize + PartialOrd + Debug> KnownSize for KeyAddr<T> {
         try!(T::write_default(file, None));
         Ok(try!(u64::write_default(file, None)))
     }
-
-
 }
-
 
 impl KnownSize for u64 {
     fn size() -> u64 {
@@ -1365,25 +1368,20 @@ impl KnownSize for u64 {
     }
 }
 
-
-
-
 fn seek_maybe(file: &mut File, addr: Option<u64>) -> Result<()> {
     Ok(match addr {
         Some(addr) => {
             try!(file.seek(SeekFrom::Start(addr)));
             ()
-        },
+        }
         None => (),
     })
-
 }
 
 #[derive(PartialEq, Debug)]
 pub enum IterOption<T: PartialEq + Debug + Clone> {
     Including(T),
     Excluding(T),
-
 }
 impl<T: PartialEq + Debug + Clone> IterOption<T> {
     fn unwrap(&self) -> T {
@@ -1406,7 +1404,7 @@ pub struct Bterator<'a, T: KnownSize + PartialOrd + Debug> {
     direction: IterDirection,
 }
 
-impl<'a,T: KnownSize + PartialOrd + Debug> Iterator for Bterator<'a,T> {
+impl<'a, T: KnownSize + PartialOrd + Debug> Iterator for Bterator<'a, T> {
     type Item = KeyAddr<T>;
 
     fn next(&mut self) -> Option<KeyAddr<T>> {
@@ -1423,10 +1421,10 @@ impl<'a,T: KnownSize + PartialOrd + Debug> Iterator for Bterator<'a,T> {
             if node.is_ok() {
                 self.node = node.unwrap();
             } else {
-                return None
+                return None;
             }
         }
-        let index = match self.direction{
+        let index = match self.direction {
             IterDirection::Forward => 0,
             IterDirection::Backward => self.node.node_list.elementcount - 1,
         };
