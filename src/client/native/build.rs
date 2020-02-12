@@ -1,9 +1,9 @@
 //! Compile the listed C-files
 
-extern crate gcc;
+extern crate cc;
 
 fn main() {
-    gcc::Config::new()
+    cc::Build::new()
         .file("src/client/native/console_raw.c")
         .compile("librawconsole.a");
 }
