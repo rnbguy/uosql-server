@@ -60,7 +60,7 @@ impl<'a> Builder<'a> {
     /// more than once in one running program.
     pub fn enable(self) -> io::Result<()> {
         // Try to open the logfile in write-append mode, if any was specified
-        let file = match self.logfile {
+        let _file = match self.logfile {
             Some(path) => Some(try!(fs::OpenOptions::new()
                 .write(true)
                 .append(true)
@@ -161,20 +161,20 @@ fn get_colors(lvl: log::Level) -> (term::Style, term::Style) {
 
     // Style for the user's message
     let msg_col = match lvl {
-        Error => Attr::Bold.fg(Red),
-        Warn => Attr::Plain.fg(Yellow),
-        Info => Attr::Plain.fg(White),
-        Debug => Attr::Plain.fg(NotSet),
-        Trace => Attr::Dim.fg(NotSet),
+        _Error => Attr::Bold.fg(Red),
+        _Warn => Attr::Plain.fg(Yellow),
+        _Info => Attr::Plain.fg(White),
+        _Debug => Attr::Plain.fg(NotSet),
+        _Trace => Attr::Dim.fg(NotSet),
     };
 
     // Color for the first info field: The log level
     let lvl_col = match lvl {
-        Error => Attr::Bold.fg(Red),
-        Warn => Attr::Plain.fg(Yellow),
-        Info => Attr::Plain.fg(White),
-        Debug => Attr::Plain.fg(NotSet),
-        Trace => Attr::Dim.fg(NotSet),
+        _Error => Attr::Bold.fg(Red),
+        _Warn => Attr::Plain.fg(Yellow),
+        _Info => Attr::Plain.fg(White),
+        _Debug => Attr::Plain.fg(NotSet),
+        _Trace => Attr::Dim.fg(NotSet),
     };
 
     (lvl_col, msg_col)

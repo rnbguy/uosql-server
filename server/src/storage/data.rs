@@ -91,7 +91,7 @@ impl<B: Write + Read + Seek> Rows<B> {
     /// and writes the data into target_buf
     /// returns the bytes read or an Error otherwise.
     /// Returns Error:EndOfFile if no next row could be read.
-    pub fn next_row<W: Write>(&mut self, mut target_buf: &mut W) -> Result<u64, Error> {
+    pub fn next_row<W: Write>(&mut self, target_buf: &mut W) -> Result<u64, Error> {
         self.next_row_ex(target_buf, true)
     }
 
@@ -102,7 +102,7 @@ impl<B: Write + Read + Seek> Rows<B> {
     /// if ignore_deleted_rows == true, deleted rows will be skipped.
     fn next_row_ex<W: Write>(
         &mut self,
-        mut target_buf: &mut W,
+        target_buf: &mut W,
         ignore_deleted_rows: bool,
     ) -> Result<u64, Error> {
         info!("Moving to next row.");

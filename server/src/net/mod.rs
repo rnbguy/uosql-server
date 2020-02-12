@@ -23,7 +23,6 @@ use std::io::{self, Read, Write};
 use self::types::*;
 
 use bincode::{deserialize_from, serialize_into};
-use serde::{Deserialize, Serialize};
 
 use parse::parser::ParseError;
 use storage::ResultSet;

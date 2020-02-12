@@ -8,7 +8,6 @@ pub mod types;
 
 mod data;
 
-use bincode::{deserialize_from, serialize_into};
 use serde::{Deserialize, Serialize};
 
 pub use self::data::ResultSet;

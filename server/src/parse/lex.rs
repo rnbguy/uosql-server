@@ -67,7 +67,7 @@ impl<'a> Lexer<'a> {
         loop {
             // Take current char
             match self.curr.unwrap_or(' ') {
-                c @ 'a'...'z' | c @ 'A'...'Z' | c @ '0'...'9' | c @ '_' => {
+                c @ 'a'..='z' | c @ 'A'..='Z' | c @ '0'..='9' | c @ '_' => {
                     // Push letter into return string
                     s.push(c);
                 }
@@ -86,7 +86,7 @@ impl<'a> Lexer<'a> {
         let dot = false;
         loop {
             match self.curr.unwrap_or(' ') {
-                c @ '0'...'9' | c @ '.' => {
+                c @ '0'..='9' | c @ '.' => {
                     s.push(c);
                 }
                 _ => break,
@@ -170,13 +170,13 @@ impl<'a> Lexer<'a> {
         // Matching current char to respective token
         let token = match curr {
             // Words
-            'a'...'z' | 'A'...'Z' => {
+            'a'..='z' | 'A'..='Z' => {
                 let w = self.scan_words();
                 Token::Word(w)
             }
 
             // Lit Num
-            '0'...'9' => {
+            '0'..='9' => {
                 let n = self.scan_nums();
                 if let Ok(i) = n.parse::<i64>() {
                     Token::Literal(Lit::Int(i))

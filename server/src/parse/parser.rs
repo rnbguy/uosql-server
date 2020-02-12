@@ -808,9 +808,9 @@ impl<'a> Parser<'a> {
     // In case of e.g. char(x) checks if ( ,x and ) are the following
     // token and if x is correct size.
     fn expect_datatype(&mut self) -> Result<SqlType, ParseError> {
-        let mut found_datatype;
-        let mut span_lo;
-        let mut span_hi;
+        let found_datatype;
+        let span_lo;
+        let span_hi;
         let tmp_datatype;
         {
             // checks if token non or some
@@ -874,13 +874,13 @@ impl<'a> Parser<'a> {
                 }))
             }
         };
-        Ok((found_datatype))
+        Ok(found_datatype)
     }
     // checks if the current token is a word
     fn expect_word(&self, allowkeyword: bool) -> Result<String, ParseError> {
-        let mut found_word;
-        let mut span_lo;
-        let mut span_hi;
+        let found_word;
+        let span_lo;
+        let span_hi;
         {
             // checks if token non or some
             let token = match self.curr {
@@ -913,9 +913,9 @@ impl<'a> Parser<'a> {
 
     // checks if the current token is a word
     fn expect_literal(&self) -> Result<Lit, ParseError> {
-        let mut found_lit;
-        let mut span_lo;
-        let mut span_hi;
+        let found_lit;
+        let span_lo;
+        let span_hi;
         {
             // checks if token non or some
             let token = match self.curr {
@@ -952,9 +952,9 @@ impl<'a> Parser<'a> {
     }
     // checks if the current token is a number
     fn expect_number(&self) -> Result<Lit, ParseError> {
-        let mut found_num;
-        let mut span_lo;
-        let mut span_hi;
+        let found_num;
+        let span_lo;
+        let span_hi;
         {
             // checks if token non or some
             let token = match self.curr {
@@ -998,9 +998,9 @@ impl<'a> Parser<'a> {
     // matches current token against any keyword and checks if it is one of
     // the expected keywords
     fn expect_keyword(&self, expected_keywords: &[Keyword]) -> Result<Keyword, ParseError> {
-        let mut found_keyword;
-        let mut span_lo;
-        let mut span_hi;
+        let found_keyword;
+        let span_lo;
+        let span_hi;
         {
             // checks if token non or some
             let token = match self.curr {

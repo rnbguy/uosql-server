@@ -82,7 +82,7 @@ pub fn handle(mut stream: TcpStream) {
                                 debug!("{:?}", tree);
 
                                 // Pass AST to query executer
-                                let mut r2 = query::execute_from_ast(tree, &mut user);
+                                let r2 = query::execute_from_ast(tree, &mut user);
 
                                 debug!("{:?}", r2);
 

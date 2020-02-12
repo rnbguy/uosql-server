@@ -7,15 +7,14 @@
 use super::auth;
 use super::parse::ast::*;
 use super::parse::parser::ParseError;
-use super::parse::token::Lit;
+
 use super::storage;
 use super::storage::types::SqlType;
-use super::storage::{Column, Database, Engine, EngineID, Error, ResultSet, Rows, Table};
-use byteorder::{BigEndian, ReadBytesExt, WriteBytesExt};
+use super::storage::{Column, Database, Engine, EngineID, ResultSet, Rows, Table};
+
 use std::collections::HashMap;
-use std::fs::File;
+
 use std::io::Cursor;
-use std::io::{Read, Seek, Write};
 
 pub struct Executor<'a> {
     pub user: &'a mut auth::User,
@@ -42,7 +41,7 @@ impl<'a> Executor<'a> {
 
     fn execute_manipulation_stmt(
         &mut self,
-        mut query: ManipulationStmt,
+        query: ManipulationStmt,
     ) -> Result<Rows<Cursor<Vec<u8>>>, ExecutionError> {
         match query {
             ManipulationStmt::Use(stmt) => self.execute_use_stmt(stmt),
@@ -123,7 +122,7 @@ impl<'a> Executor<'a> {
         &mut self,
         mut stmt: SelectStmt,
     ) -> Result<Rows<Cursor<Vec<u8>>>, ExecutionError> {
-        let mut masterrow: Rows<Cursor<Vec<u8>>>;
+        let masterrow: Rows<Cursor<Vec<u8>>>;
 
         let mut left = try!(self.get_rows(&stmt.tid[0]));
 
@@ -186,7 +185,7 @@ impl<'a> Executor<'a> {
                 Col::Every => {
                     if target.alias.is_some() {
                         let mut targetclone = target.clone();
-                        let mut tablename = stmt.alias.get(&targetclone.alias.unwrap());
+                        let tablename = stmt.alias.get(&targetclone.alias.unwrap());
                         if tablename.is_none() {
                             return Err(ExecutionError::UnknownAlias);
                         }
@@ -247,7 +246,7 @@ impl<'a> Executor<'a> {
             columnvec.push(whereresult.columns[index.1].clone());
         }
 
-        let mut cursor = Cursor::new(Vec::<u8>::new());
+        let cursor = Cursor::new(Vec::<u8>::new());
         let mut resultrows = Rows::<Cursor<Vec<u8>>>::new(cursor, &columnvec);
 
         // TODO: implement skiprow for Rows!!!
@@ -257,7 +256,7 @@ impl<'a> Executor<'a> {
             let limit = stmt.limit.unwrap();
             limitcount = (true, limit.count.unwrap().clone());
             if limit.offset.is_some() {
-                for i in 0..limit.offset.unwrap() {
+                for _i in 0..limit.offset.unwrap() {
                     let mut skiprow = Vec::<u8>::new();
                     match whereresult.next_row(&mut skiprow) {
                         Ok(_) => (),
@@ -304,7 +303,7 @@ impl<'a> Executor<'a> {
         match conditions {
             &Conditions::And(ref c1, ref c2) => {
                 if wheretype == Where::Select {
-                    let mut leftside =
+                    let leftside =
                         try!(self.execute_where(tableset, infos, c1, false, wheretype.clone()));
                     self.execute_where(leftside, infos, c2, false, wheretype)
                 } else {
@@ -415,7 +414,7 @@ impl<'a> Executor<'a> {
                     CondType::Literal(ref lit) => {
                         // Error handling: if wrong compare type is giving => Missmatch error
                         match tableset.columns[index].sql_type {
-                            SqlType::Char(c) => {
+                            SqlType::Char(_c) => {
                                 if lit.sqltype() != SqlType::Char(0) {
                                     return Err(ExecutionError::CompareDatatypeMissmatch);
                                 }
@@ -449,7 +448,7 @@ impl<'a> Executor<'a> {
         &mut self,
         mut query: DeleteStmt,
     ) -> Result<Rows<Cursor<Vec<u8>>>, ExecutionError> {
-        let mut table = try!(self.get_rows(&query.tid));
+        let table = try!(self.get_rows(&query.tid));
         let mut name_column_map = HashMap::<String, HashMap<String, usize>>::new();
         let mut column_index_map = HashMap::<String, usize>::new();
         let mut column_tablename_map = HashMap::<String, String>::new();
@@ -574,7 +573,7 @@ impl<'a> Executor<'a> {
         &mut self,
         stmt: AlterTableStmt,
     ) -> Result<Rows<Cursor<Vec<u8>>>, ExecutionError> {
-        let table = try!(self.get_table(&stmt.tid));
+        let _table = try!(self.get_table(&stmt.tid));
         match stmt.op {
             AlterOp::Add(columninfo) => {
                 let mut table = try!(self.get_table(&stmt.tid));
@@ -652,7 +651,7 @@ impl<'a> Executor<'a> {
         Ok(try!(dbase.load_table(table)))
     }
 
-    fn get_engine<'b>(&'b self, table: &str) -> Result<Box<Engine + 'b>, ExecutionError> {
+    fn get_engine<'b>(&'b self, table: &str) -> Result<Box<dyn Engine + 'b>, ExecutionError> {
         let table = try!(self.get_table(table));
         Ok(table.create_engine())
     }
@@ -721,11 +720,11 @@ impl<'a> Executor<'a> {
         let mut columnvec = left.columns.clone();
         let mut appendvec = right.columns.clone();
 
-        for i in 0..appendvec.len() {
-            let appendlength = appendvec.len();
+        for _i in 0..appendvec.len() {
+            let _appendlength = appendvec.len();
             columnvec.push(appendvec.remove(0));
         }
-        let mut cursor = Cursor::new(Vec::<u8>::new());
+        let cursor = Cursor::new(Vec::<u8>::new());
         let mut rows = Rows::<Cursor<Vec<u8>>>::new(cursor, &columnvec);
 
         loop {

@@ -1,8 +1,5 @@
 extern crate server;
 use server::storage::bstar::{Bnode, Bstar, IterDirection, IterOption, KeyAddr, SortedList};
-use std::fs::File;
-use std::fs::OpenOptions;
-use std::io::*;
 
 fn main() {
     Bstar::<u64>::delete("test");

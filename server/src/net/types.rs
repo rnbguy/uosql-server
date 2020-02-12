@@ -1,4 +1,3 @@
-use std::cmp::max;
 /// Because of cyclic references to modules we need to use super::Error to use
 /// the enum. Nightly Build supports using enums - so we can fix super::Error in
 /// about 3 months ;)
@@ -169,7 +168,7 @@ impl DataSet {
             }
             match String::from_sql(&self.data[self.current_pos - 1][idx][0..pos]) {
                 Ok(val) => Some(val),
-                Err(e) => None,
+                Err(_e) => None,
             }
         }
     }
@@ -260,7 +259,7 @@ pub fn preprocess(data: &ResultSet) -> DataSet {
 
     // split data
     let mut pos = 0;
-    for i in 0..(line_count) {
+    for _i in 0..(line_count) {
         let mut colvec = Vec::new();
         for j in 0..(col_count) {
             let mut linevec = Vec::<u8>::new();

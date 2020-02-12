@@ -115,7 +115,7 @@ impl<'a> Engine for FlatFile<'a> {
 
     fn reorganize(&mut self) -> Result<(), Error> {
         info!("Reorganizing structure.");
-        let mut new_size: u64;
+        let new_size: u64;
         {
             let mut reader = try!(self.get_reader());
             new_size = try!(reader.reorganize());

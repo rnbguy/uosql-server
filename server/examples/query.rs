@@ -4,7 +4,7 @@ use server::net;
 use server::net::types::DataSet;
 use server::parse;
 use server::query;
-use server::storage::{ResultSet, SqlType};
+use server::storage::SqlType;
 use std::cmp::{max, min};
 use std::io::{self, stdout, Write};
 

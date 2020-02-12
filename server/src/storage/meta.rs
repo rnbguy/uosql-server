@@ -263,7 +263,7 @@ impl<'a> Table<'a> {
 
     /// Creates an engine for Table
     /// Returns Box<Engine>
-    pub fn create_engine(self) -> Box<Engine + 'a> {
+    pub fn create_engine(self) -> Box<dyn Engine + 'a> {
         // add engines here
         match self.meta_data.engine_id {
             EngineID::FlatFile => Box::new(FlatFile::new(self)),

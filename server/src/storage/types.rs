@@ -4,7 +4,6 @@ use super::Error;
 
 use byteorder::{BigEndian, ReadBytesExt, WriteBytesExt};
 
-use bincode::{deserialize_from, serialize_into};
 use serde::{Deserialize, Serialize};
 
 use std::ffi::CString;
@@ -31,7 +30,7 @@ impl SqlType {
     }
 
     /// Decodes the data in buf according to SqlType into a Lit enum.
-    pub fn decode_from<R: Read>(&self, mut buf: &mut R) -> Result<Lit, Error> {
+    pub fn decode_from<R: Read>(&self, buf: &mut R) -> Result<Lit, Error> {
         match self {
             &SqlType::Int => {
                 let i = try!(buf.read_i32::<BigEndian>());
@@ -56,7 +55,7 @@ impl SqlType {
     /// Returns byteorder::Error, if data could not be written to buf.
     /// Lit: contains data to write to buf
     /// buf: target of write operation.
-    pub fn encode_into<W: Write>(&self, mut buf: &mut W, data: &Lit) -> Result<u32, Error> {
+    pub fn encode_into<W: Write>(&self, buf: &mut W, data: &Lit) -> Result<u32, Error> {
         match self {
             &SqlType::Int => match data {
                 &Lit::Int(a) => {

@@ -1,5 +1,5 @@
 use byteorder::{BigEndian, ReadBytesExt, WriteBytesExt};
-use std::cmp::Ord;
+
 use std::cmp::Ordering;
 use std::fmt::Debug;
 use std::fs;
@@ -536,7 +536,7 @@ impl<T: KnownSize + PartialOrd + Clone + Debug> Bstar<T> {
                     // merge the two brothers if peer has too little elements
                     if peernode.1 == Side::Left {
                         // peer ond left side => append node list to peer list.
-                        for i in 0..(node.node_list.elementcount) {
+                        for _i in 0..(node.node_list.elementcount) {
                             let tmp = node.node_list.delete_by_index(0);
                             peernode.0.node_list.insert_at_index(0, tmp.unwrap());
                         }
@@ -564,7 +564,7 @@ impl<T: KnownSize + PartialOrd + Clone + Debug> Bstar<T> {
                         ));
                     } else {
                         // peer on right side => append peer list to node list
-                        for i in 0..(peernode.0.node_list.elementcount) {
+                        for _i in 0..(peernode.0.node_list.elementcount) {
                             let tmp = peernode.0.node_list.delete_by_index(0);
                             node.node_list.insert_at_index(0, tmp.unwrap());
                         }
@@ -598,7 +598,7 @@ impl<T: KnownSize + PartialOrd + Clone + Debug> Bstar<T> {
                     // distribute nodelists from both nodes equally
 
                     let peerlength = peernode.0.node_list.elementcount;
-                    let mut nodelength = node.node_list.elementcount;
+                    let nodelength = node.node_list.elementcount;
 
                     if peernode.1 == Side::Left {
                         // peer is left node
@@ -613,11 +613,11 @@ impl<T: KnownSize + PartialOrd + Clone + Debug> Bstar<T> {
                         father.node_list.get_by_index(indexonfather).unwrap().key =
                             node.node_list.get_by_index(0).unwrap().key.clone();
                     } else {
-                        for i in 0..((peerlength - nodelength) / 2) {
+                        for _i in 0..((peerlength - nodelength) / 2) {
                             let tmp = peernode.0.node_list.delete_by_index(0);
                             node.node_list
                                 .insert_at_index(nodelength as usize, tmp.unwrap());
-                            let mut nodelength = node.node_list.elementcount;
+                            let _nodelength = node.node_list.elementcount;
                         }
                         father
                             .node_list
@@ -712,7 +712,7 @@ impl<T: KnownSize + PartialOrd + Clone + Debug> Bstar<T> {
         addr: u64,
         key: &KeyAddr<T>,
     ) -> Result<InternalLookup<T>> {
-        let mut res = node.node_list.get_index_by_key(key);
+        let res = node.node_list.get_index_by_key(key);
         if !node.is_leaf {
             if res.0 && res.1 != 0 {
                 let mut newaddr = node.node_list.get_by_index(res.1 - 1).unwrap().addr;
@@ -962,7 +962,7 @@ impl<T: KnownSize + PartialOrd + Clone + Debug> Bstar<T> {
                         }
                     }
                 };
-                for i in if direction == IterDirection::Forward {
+                for _i in if direction == IterDirection::Forward {
                     0..lookup.index.unwrap() + modifier
                 } else {
                     0..(bnode.node_list.elementcount - 1 - lookup.index.unwrap() + modifier)
@@ -1080,7 +1080,7 @@ impl<T: PartialOrd + KnownSize + Debug> Bnode<T> {
         let elementcount = try!(file.read_u64::<BigEndian>());
         let order = try!(file.read_u64::<BigEndian>());
         let mut list = SortedList::<KeyAddr<T>>::with_capacity((order * 2) as usize);
-        for i in 0..elementcount {
+        for _i in 0..elementcount {
             let keyaddr = try!(KeyAddr::<T>::read(file, None));
             list.insert(keyaddr);
         }
