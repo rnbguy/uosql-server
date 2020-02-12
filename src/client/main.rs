@@ -20,7 +20,7 @@ mod specialcrate;
 use bincode::{deserialize_from, serialize_into};
 use docopt::Docopt;
 use regex::Regex;
-use serde::{Deserialize, Serialize};
+use serde::{Deserialize};
 use server::storage::SqlType;
 use std::cmp::{max, min};
 use std::error::Error;

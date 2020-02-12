@@ -8,7 +8,7 @@ pub use server::net::types;
 use server::storage::ResultSet;
 use std::fmt;
 use std::io::{self, Write};
-use std::net::{AddrParseError, Ipv4Addr, TcpStream};
+use std::net::{AddrParseError, TcpStream};
 use std::str::FromStr;
 use types::*;
 
@@ -217,7 +217,7 @@ fn get_lib_version() -> u8 {
 }
 
 /// Send command package with actual command, e.g. quit, ping, query.
-fn send_cmd<W: Write>(mut s: &mut W, cmd: Command, size: u64) -> Result<(), Error> {
+fn send_cmd<W: Write>(mut s: &mut W, cmd: Command, _size: u64) -> Result<(), Error> {
     try!(serialize_into(&mut s, &PkgType::Command));
     try!(serialize_into(&mut s, &cmd));
     Ok(())
