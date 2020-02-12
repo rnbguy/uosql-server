@@ -15,7 +15,9 @@ pub trait KnownSize {
     /// reads the object from file, at address if specified.
     /// if the address is not specified, the object will be read
     /// from wherever the current seek is
-    fn read(&mut File, Option<u64>) -> Result<Self>;
+    fn read(&mut File, Option<u64>) -> Result<Self>
+    where
+        Self: std::marker::Sized;
     /// writes the object to file, at address if specified.
     /// if the address is not specified, the object will be written
     /// to wherever the current seek is

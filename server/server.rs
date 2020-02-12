@@ -35,7 +35,7 @@ struct Args {
 fn main() {
     // Configure and enable the logger. We may `unwrap` here, because a panic
     // would happen right after starting the program
-    server::logger::with_loglevel(log::LogLevelFilter::Trace)
+    server::logger::with_loglevel(log::LevelFilter::Trace)
         .with_logfile(std::path::Path::new("log.txt"))
         .enable()
         .unwrap();

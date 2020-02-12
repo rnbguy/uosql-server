@@ -314,7 +314,9 @@ impl Column {
 //---------------------------------------------------------------
 
 pub trait FromSql {
-    fn from_sql(data: &[u8]) -> Result<Self, Error>;
+    fn from_sql(data: &[u8]) -> Result<Self, Error>
+    where
+        Self: std::marker::Sized;
 }
 
 impl FromSql for i32 {

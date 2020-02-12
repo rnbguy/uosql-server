@@ -4,7 +4,7 @@
 //! crate published by the Rust developer.
 //!
 
-use log::*;
+use log;
 use std::fs;
 use std::io;
 use std::io::Write;
@@ -14,7 +14,7 @@ use std::sync::Mutex;
 use term::{self, ToStyle};
 
 /// Returns a builder that can enable the logger globally.
-pub fn with_loglevel(lvl: LogLevelFilter) -> Builder<'static> {
+pub fn with_loglevel(lvl: log::LevelFilter) -> Builder<'static> {
     Builder {
         lvl: lvl,
         logfile: None,
@@ -24,7 +24,7 @@ pub fn with_loglevel(lvl: LogLevelFilter) -> Builder<'static> {
 
 /// A builder type to easily configure the logger.
 pub struct Builder<'a> {
-    lvl: LogLevelFilter,
+    lvl: log::LevelFilter,
     logfile: Option<&'a Path>,
     stdout: bool,
 }
@@ -69,37 +69,38 @@ impl<'a> Builder<'a> {
             None => None,
         };
 
-        set_logger(|filter| {
-            filter.set(self.lvl);
-            Box::new(Logger {
-                level_filter: filter,
-                logfile: file.map(|f| Mutex::new(f)),
-                stdout: self.stdout,
-            })
-        })
-        .map_err(|_| {
-            io::Error::new(
-                io::ErrorKind::AlreadyExists,
-                "method 'enable' was called more than once!",
-            )
-        })
+        // log::set_logger(|filter: log::LevelFilter| {
+        //     filter.set(self.lvl);
+        //     Box::new(Logger {
+        //         level_filter: filter,
+        //         logfile: file.map(|f| Mutex::new(f)),
+        //         stdout: self.stdout,
+        //     })
+        // })
+        // .map_err(|_| {
+        //     io::Error::new(
+        //         io::ErrorKind::AlreadyExists,
+        //         "method 'enable' was called more than once!",
+        //     )
+        // })
+        Ok(())
     }
 }
 
 /// Type to do the actual logging. You don't need to interact with it directly:
 /// Use macros and functions of the `log` crate.
 struct Logger {
-    level_filter: MaxLogLevelFilter,
+    level_filter: log::LevelFilter,
     logfile: Option<Mutex<fs::File>>,
     stdout: bool,
 }
 
-impl Log for Logger {
-    fn enabled(&self, metadata: &LogMetadata) -> bool {
-        metadata.level() <= self.level_filter.get()
+impl log::Log for Logger {
+    fn enabled(&self, metadata: &log::Metadata) -> bool {
+        metadata.level() <= self.level_filter.to_level().expect("not set to off")
     }
 
-    fn log(&self, record: &LogRecord) {
+    fn log(&self, record: &log::Record) {
         // Early return if the message won't be printed
         if !self.enabled(record.metadata()) {
             return;
@@ -113,7 +114,7 @@ impl Log for Logger {
         };
 
         // Ignore the leading 'src/' in the file path
-        let src_file = &record.location().file();
+        let src_file = &record.file().expect("not none");
 
         // If a logfile is specified (file logging is enabled)
         if let Some(ref file) = self.logfile {
@@ -130,7 +131,7 @@ impl Log for Logger {
                 level = record.level(),
                 module = mod_path,
                 file = src_file,
-                line = record.location().line(),
+                line = record.line().expect("not none"),
                 msg = record.args()
             );
         }
@@ -144,16 +145,17 @@ impl Log for Logger {
                 level = lvl_col.paint(record.level()),
                 module = mod_path,
                 file = term::Color::Blue.paint(src_file),
-                line = record.location().line(),
+                line = record.line().expect("not none"),
                 delim = term::Color::White.paint("$"),
                 msg = msg_col.paint(record.args())
             );
         }
     }
+
+    fn flush(&self) {}
 }
 
-fn get_colors(lvl: LogLevel) -> (term::Style, term::Style) {
-    use log::LogLevel::*;
+fn get_colors(lvl: log::Level) -> (term::Style, term::Style) {
     use term::Color::*;
     use term::{Attr, ToStyle};
 
